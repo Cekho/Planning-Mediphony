@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Planning (consultation)</title>
+<style>
+:root {
+  --bg: #f6f7f9; --surface: #fff; --ink: #18202b; --muted: #5f6b7a; --line: #e2e6eb; --grid: #1d2733; --day: #000;
+  --closed: #c9ced5; --accent: #1f4e8c; --sel: #1f4e8c;
+  --font: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 var(--font); }
+.wrap { max-width: 1300px; margin: 0 auto; padding: 24px 16px 48px; }
+header { display: grid; gap: 14px; margin-bottom: 16px; }
+.head-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+h1 { font-size: 26px; margin: 0; }
+.sub { color: var(--muted); margin: 0; }
+.btn { font: inherit; font-weight: 600; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.btn.sm { padding: 6px 12px; font-size: 14px; }
+.btn:focus-visible, .tab:focus-visible, .tool:focus-visible, .daybtn:focus-visible { outline: 3px solid #9cc3ff; outline-offset: 2px; }
+.btn-edit { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-edit[aria-pressed="true"] { background: #2e9b4f; border-color: #2e9b4f; }
+.btn-save { background: #2e9b4f; color: #fff; border-color: #2e9b4f; }
+.btn-danger { color: #b3261e; }
+.head-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.weekbar { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+.tabs { display: inline-flex; background: #eef1f4; border-radius: 10px; padding: 4px; gap: 4px; }
+.tab { font: 700 16px var(--font); width: 46px; height: 40px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; position: relative; }
+.tab[aria-selected="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+.tab .now { position: absolute; top: -6px; right: -4px; font: 600 9px var(--font); background: #2e9b4f; color: #fff; border-radius: 6px; padding: 1px 4px; }
+.today { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.nav { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: 16px; }
+.rule { font-size: 13px; color: var(--muted); margin-left: auto; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.legend .sep { width: 1px; height: 24px; background: var(--line); margin: 0 4px; }
+.chip { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 6px 14px 6px 8px; background: var(--surface); border: 1px solid var(--line); font-weight: 600; font-size: 14px; }
+.chip i { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(0,0,0,.15); }
+.chip i.sq { border-radius: 4px; }
+.chip small { color: var(--muted); font-weight: 400; }
+.chip.unnamed > span { color: var(--muted); font-style: italic; font-weight: 400; }
+.recap-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+table.recap { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 13px; user-select: text; -webkit-user-select: text; }
+table.recap th, table.recap td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; white-space: nowrap; }
+table.recap thead th { position: static; background: #eef1f4; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+table.recap tbody tr:last-child td { border-bottom: 0; }
+table.recap .who { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
+table.recap .who i { width: 16px; height: 16px; border-radius: 50%; border: 1px solid rgba(0,0,0,.15); flex: none; }
+table.recap .who.unnamed span { color: var(--muted); font-style: italic; font-weight: 400; }
+table.recap .tot { font-weight: 700; font-variant-numeric: tabular-nums; }
+table.recap .tot small { display: block; font-weight: 400; color: var(--muted); }
+table.recap .seg { font-variant-numeric: tabular-nums; }
+table.recap .seg b { font-weight: 600; }
+table.recap .off { color: #b6bfca; }
+table.recap td.today, table.recap th.today { background: #f1f7ff; }
+.wrap { max-width: 1480px; }
+.main { display: grid; grid-template-columns: minmax(0, auto) minmax(280px, 340px); gap: 16px; align-items: start; }
+@media (max-width: 1220px) { .main { grid-template-columns: 1fr; } }
+.scroller { min-width: 0; width: fit-content; max-width: 100%; }
+.side { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; }
+.side h3 { margin: 0; font-size: 15px; padding: 12px 14px; border-bottom: 1px solid var(--line); background: #eef1f4; display: flex; justify-content: space-between; align-items: baseline; }
+.side h3 small { font-weight: 400; color: var(--muted); font-size: 12px; }
+.totals { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.totals .t { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+.totals .t small { display: block; font-weight: 400; color: var(--muted); }
+.dayblock { border-bottom: 1px solid var(--line); }
+.dayblock:last-child { border-bottom: 0; }
+.dayblock h4 { margin: 0; padding: 8px 14px 4px; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; display: flex; gap: 8px; align-items: center; }
+.dayblock.today h4 { color: var(--accent); }
+.dayblock.today { background: #f4f8ff; }
+.drow { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 3px 14px; font-size: 13px; align-items: baseline; }
+.drow:last-child { padding-bottom: 10px; }
+.drow .who { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; min-width: 0; }
+.drow .who i { width: 11px; height: 11px; border-radius: 50%; border: 1px solid rgba(0,0,0,.15); flex: none; }
+.drow .who.unnamed span { color: var(--muted); font-style: italic; font-weight: 400; }
+.drow .h { font-variant-numeric: tabular-nums; text-align: right; }
+.drow .rest { color: var(--muted); }
+.drow .labtag { display: inline-block; font-size: 11px; font-weight: 600; padding: 0 6px; border-radius: 6px; margin-left: 4px; }
+td.c.closed.blank { background-image: none; }
+.main { grid-template-columns: minmax(0, auto) minmax(400px, 500px); }
+.side { background: transparent; border: 0; border-radius: 0; display: grid; gap: 12px; }
+.side .side-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--muted); padding: 0 2px; }
+.side .side-head b { color: var(--ink); font-size: 15px; }
+.pcard { background: var(--surface); border: 1px solid #1d2733; border-radius: 6px; overflow: hidden; }
+.pcard .ph { text-align: center; font-weight: 800; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; padding: 5px 8px; border-bottom: 1px solid #1d2733; }
+.pcard table { width: 100%; border-collapse: collapse; font-size: 11.5px; user-select: text; -webkit-user-select: text; table-layout: fixed; }
+.pcard th, .pcard td { border: 1px solid #b9c1cb; padding: 4px 4px; text-align: center; font-variant-numeric: tabular-nums; line-height: 1.3; }
+.pcard thead th { position: static; background: #d9dde2; color: #1d2733; font-weight: 800; font-size: 10.5px; text-transform: uppercase; letter-spacing: .03em; }
+.pcard thead th.cur { background: #1d2733; color: #fff; }
+.pcard tbody th { background: #d9dde2; color: #1d2733; font-weight: 700; font-size: 10.5px; text-transform: uppercase; width: 72px; }
+.pcard td { font-weight: 700; color: #1d2733; }
+.pcard td.cur { background: #f1f7ff; }
+.pcard td.off { color: #8a95a3; font-weight: 600; }
+.pcard tr.tot th, .pcard tr.tot td { background: #f3f5f7; font-size: 10.5px; }
+.pcard .labtag { display: inline-block; font-size: 10px; font-weight: 700; padding: 0 5px; border-radius: 4px; margin-top: 2px; }
+.side .labels-legend { display: flex; flex-wrap: wrap; gap: 6px; }
+.online { background: var(--surface); border: 1px solid #b9d0f5; border-radius: 10px; padding: 12px; display: grid; gap: 10px; }
+.online .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+.online label { display: grid; gap: 3px; font-size: 13px; font-weight: 600; }
+.online input { font: inherit; font-weight: 400; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+.olstatus { font-size: 13px; font-weight: 600; padding: 6px 10px; border-radius: 8px; background: #eef1f4; color: var(--muted); }
+.olstatus.ok { background: #e5f5ea; color: #1d6b35; }
+.olstatus.err { background: #fde8e6; color: #b3261e; }
+.olstatus.wait { background: #fff4d6; color: #7a5a00; }
+.live { font: 600 12px var(--font); border-radius: 999px; padding: 4px 10px; background: #e5f5ea; color: #1d6b35; }
+.live.off { background: #eef1f4; color: var(--muted); }
+.ro-badge { font: 600 12px var(--font); background: #eef1f4; color: var(--muted); border-radius: 999px; padding: 4px 10px; }
+
+.editpanel { display: grid; gap: 16px; background: #eaf2ff; border: 1px solid #b9d0f5; border-radius: 14px; padding: 14px; }
+.editpanel h2 { font-size: 15px; margin: 0 0 6px; }
+.cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 900px) { .cols2 { grid-template-columns: 1fr; } }
+.people { display: flex; flex-wrap: wrap; gap: 8px; }
+.person { display: flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; }
+.person input[type=text] { width: 130px; font: inherit; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; }
+.person input[type=color] { width: 36px; height: 30px; border: 0; padding: 0; background: none; cursor: pointer; }
+.person .arrow { color: var(--muted); }
+.person .del { border: 0; background: none; color: #b3261e; font-size: 16px; cursor: pointer; padding: 2px 4px; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.tools .grp { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-left: 4px; }
+.tool { display: inline-flex; align-items: center; gap: 6px; font: 600 14px var(--font); padding: 7px 12px; border-radius: 999px; border: 2px solid var(--line); background: var(--surface); cursor: pointer; color: var(--ink); }
+.tool i { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0,0,0,.15); }
+.tool i.sq { border-radius: 3px; }
+.tool[aria-pressed="true"] { border-color: var(--ink); }
+.tool.select[aria-pressed="true"] { border-color: var(--sel); background: #dbe8ff; }
+.selbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--surface); border: 1px dashed var(--sel); border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+.selbar select, .selbar label { font: inherit; font-size: 14px; }
+.selbar select { padding: 5px 6px; border-radius: 6px; border: 1px solid var(--line); }
+.selbar .cols { display: inline-flex; gap: 6px; }
+.selbar .count { font-weight: 700; color: var(--sel); }
+.row-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 14px; }
+.row-actions select { font: inherit; padding: 7px 8px; border-radius: 8px; border: 1px solid var(--line); }
+.hint { font-size: 13px; color: var(--muted); margin: 6px 0 0; }
+
+.scroller { overflow-x: auto; background: var(--surface); border: 2px solid #000; border-radius: 6px; }
+table { border-collapse: separate; border-spacing: 0; font-size: 11px; user-select: none; -webkit-user-select: none; }
+th, td { padding: 0; text-align: center; }
+thead th { background: #eef1f4; color: var(--muted); font-weight: 600; position: sticky; top: 0; z-index: 2; }
+thead tr.days th { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink); padding: 5px 0; border-bottom: 1px solid var(--grid); }
+thead tr.days th.isclosed { background: #dfe3e8; }
+.dayname { display: inline-flex; align-items: center; gap: 6px; }
+.daybtn { font: 600 10px var(--font); text-transform: none; letter-spacing: 0; border: 1px solid #b6bfca; background: var(--surface); color: var(--ink); border-radius: 6px; padding: 1px 6px; cursor: pointer; }
+.daybtn.on { background: #5f6b7a; color: #fff; border-color: #5f6b7a; }
+.daytag { font: 600 10px var(--font); text-transform: none; letter-spacing: 0; background: #5f6b7a; color: #fff; border-radius: 6px; padding: 1px 6px; }
+thead tr.slots th { padding: 3px 0; border-bottom: 3px solid var(--day); border-right: 1px solid var(--grid); }
+thead tr.slots th.dayend { border-right: 3px solid var(--day); }
+th.time, td.time { position: sticky; left: 0; background: var(--surface); z-index: 1; color: #c0392b; font-weight: 700; padding: 0 8px; white-space: nowrap; text-align: right; border-right: 3px solid var(--day); border-bottom: 1px solid var(--grid); }
+thead th.time { z-index: 3; background: #eef1f4; }
+td.c { width: 26px; min-width: 26px; height: 17px; border-right: 1px solid var(--grid); border-bottom: 1px solid var(--grid); font-weight: 800; font-size: 10px; color: #18202b; position: relative; }
+td.c.dayend, th.dayend { border-right: 3px solid var(--day); }
+tr.hour td { border-top: 2px solid #000; }
+tr.lunch td { border-bottom: 2px dashed #000 !important; }
+td.c.closed { background-image: repeating-linear-gradient(45deg, rgba(40,48,60,.38) 0 3px, transparent 3px 7px); }
+td.c.closed.blank { background-color: var(--closed); }
+td.c.lab::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--pc); }
+td.c.sel { outline: 2px dashed var(--sel); outline-offset: -2px; box-shadow: inset 0 0 0 20px rgba(31,78,140,.18); }
+.editing td.c { cursor: crosshair; touch-action: none; }
+.editing td.c:hover { outline: 2px solid var(--ink); outline-offset: -2px; }
+.empty-week { padding: 18px; color: var(--muted); }
+footer { margin-top: 16px; font-size: 12px; color: var(--muted); }
+.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #18202b; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 14px; z-index: 10; }
+@media print {
+  body { background: #fff; } .wrap { padding: 0; max-width: none; }
+  .head-actions, .editpanel, .nav, .rule, .toast, .tabs, .daybtn, #todayBtn { display: none !important; }
+  .scroller { overflow: visible; border: 0; }
+  td.c, .chip i { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="head-top">
+      <div>
+        <h1>Planning <span id="titleWeek"></span></h1>
+        <p class="sub">Version consultation · mise à jour le 26/10/2026 à 13:37</p>
+      </div>
+      <div class="head-actions">
+        <button class="btn" type="button" id="printBtn">Imprimer</button>
+        <button class="btn btn-edit" type="button" id="editBtn" aria-pressed="false">Modifier</button>
+      </div>
+    </div>
+
+    <div class="weekbar">
+      <div class="tabs" role="tablist" aria-label="Semaine" id="tabs"></div>
+      <div class="today">
+        <button class="nav" type="button" id="prevW" aria-label="Semaine précédente">‹</button>
+        <span id="dateLabel"></span>
+        <button class="nav" type="button" id="nextW" aria-label="Semaine suivante">›</button>
+        <button class="btn sm" type="button" id="todayBtn">Aujourd'hui</button>
+      </div>
+      <span class="rule" id="ruleText"></span>
+    </div>
+
+    <div class="legend" id="legend"></div>
+
+    <div class="editpanel" id="editpanel" hidden="">
+      <div class="cols2">
+        <div>
+          <h2>Personnes et couleurs</h2>
+          <div class="people" id="people"></div>
+          <button class="btn sm" type="button" id="addPerson" style="margin-top:8px">+ Ajouter une personne</button>
+        </div>
+        <div>
+          <h2>Libellés (congé, maladie…)</h2>
+          <div class="people" id="labels"></div>
+          <button class="btn sm" type="button" id="addLabel" style="margin-top:8px">+ Ajouter un libellé</button>
+          <p class="hint">Un libellé se pose sur une case : la case prend sa couleur et garde un trait de la couleur de la personne. Ces heures sont comptées à part.</p>
+        </div>
+      </div>
+
+      <div>
+        <h2>Remplir la semaine <span id="editWeek"></span></h2>
+        <div class="tools" id="tools"></div>
+        <p class="hint">Avec « Sélection », glissez sur les cases pour les mettre de côté, puis cliquez sur une personne, un libellé ou une action pour l'appliquer à toute la sélection. Sinon, l'outil choisi s'applique directement en cliquant ou en glissant.</p>
+      </div>
+
+      <div class="selbar">
+        <span>Sélection rapide :</span>
+        <select id="qsDay" aria-label="Jour"></select>
+        <span>de</span><select id="qsFrom" aria-label="Heure de début"></select>
+        <span>à</span><select id="qsTo" aria-label="Heure de fin"></select>
+        <span class="cols" id="qsCols"></span>
+        <button class="btn sm" type="button" id="qsGo">Sélectionner</button>
+        <span class="count" id="selCount"></span>
+        <button class="btn sm" type="button" id="selClear">Annuler la sélection</button>
+      </div>
+
+      <div class="row-actions">
+        <span>Rotation : la semaine du</span>
+        <input type="date" id="anchorDate" aria-label="Date de référence" style="font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line)">
+        <span>est la semaine</span>
+        <select id="anchorLetter" aria-label="Lettre de référence"><option>A</option><option>B</option><option>C</option><option>D</option></select>
+        <span class="hint" style="margin:0">Les semaines s'enchaînent ensuite A → B → C → D → A…</span>
+      </div>
+      <div class="row-actions">
+        <span>Copier la semaine</span>
+        <select id="copyFrom" aria-label="Semaine source"></select>
+        <span>vers la semaine affichée</span>
+        <button class="btn sm" type="button" id="copyBtn">Copier</button>
+        <button class="btn sm btn-danger" type="button" id="clearBtn">Vider cette semaine</button>
+      </div>
+      <div class="online" id="online">
+        <h2 style="margin:0">En ligne · mise à jour automatique de la page employés</h2>
+        <div class="grid2" id="olConfig">
+          <label>Adresse du projet Supabase<input type="url" id="olUrl" placeholder="https://xxxx.supabase.co" autocomplete="off"></label>
+          <label>Clé publique (anon)<input type="text" id="olKey" placeholder="eyJhbGciOi…" autocomplete="off"></label>
+        </div>
+        <div class="grid2" id="olLoginBox">
+          <label>E-mail<input type="email" id="olEmail" autocomplete="username"></label>
+          <label>Mot de passe<input type="password" id="olPass" autocomplete="current-password"></label>
+        </div>
+        <div class="row-actions">
+          <button class="btn btn-edit" type="button" id="olLogin">Se connecter</button>
+          <button class="btn" type="button" id="olLogout" hidden="">Se déconnecter</button>
+          <button class="btn" type="button" id="olPublish" hidden="">Publier maintenant</button>
+          <span class="olstatus" id="olStatus">Pas connecté : les changements restent sur cet ordinateur.</span>
+        </div>
+        <div class="row-actions" id="olChoice" hidden="">
+          <span><b>La version en ligne est différente de celle de cet ordinateur.</b> Laquelle garder ?</span>
+          <button class="btn" type="button" id="olTakeOnline">Charger la version en ligne</button>
+          <button class="btn btn-save" type="button" id="olPushLocal">Publier ma version</button>
+        </div>
+      </div>
+      <div class="row-actions">
+        <button class="btn btn-save" type="button" id="saveFile">Enregistrer le fichier</button>
+        <button class="btn" type="button" id="exportRO">Créer la page employés (index.html)</button>
+        <button class="btn btn-danger" type="button" id="resetBtn">Revenir à l'original</button>
+        <span class="hint" style="margin:0">Les changements sont gardés sur cet ordinateur. « Enregistrer le fichier » crée une copie à partager.</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="scroller" id="scroller"></div>
+    <aside class="side" id="recap" aria-label="Récapitulatif de la semaine"></aside>
+  </div>
+  <footer>Semaines A, B, C et D reprises des plannings d'origine. Le samedi après-midi est grisé (fermé). Les heures fermées restent comptées.</footer>
+</div>
+
+<script>
+const SRC = "<!doctype html>\n" + document.documentElement.outerHTML;
+const ORIGINAL = /*DATA*/{"v":2,"people":[{"id":"p1","name":"PEGGY","color":"#66ff33"},{"id":"p2","name":"MARION","color":"#ff33cc"},{"id":"p3","name":"","color":"#00ffff"},{"id":"p4","name":"","color":"#a992d6"},{"id":"p5","name":"","color":"#ffc000"}],"labels":[],"weeks":{"A":{"0-0-0":{"p":"p3"},"0-0-1":{"p":"p3"},"0-0-2":{"p":"p3"},"0-0-3":{"p":"p3"},"0-0-4":{"p":"p3"},"0-0-5":{"p":"p3"},"0-0-6":{"p":"p3"},"0-0-7":{"p":"p3"},"0-0-8":{"p":"p3"},"0-0-9":{"p":"p3"},"0-0-10":{"p":"p3"},"0-0-11":{"p":"p3"},"0-0-12":{"p":"p3"},"0-0-13":{"p":"p3"},"0-0-14":{"p":"p3"},"0-0-15":{"p":"p3"},"0-0-16":{"p":"p3"},"0-0-17":{"p":"p3"},"0-0-18":{"p":"p3"},"0-0-19":{"p":"p3"},"0-0-20":{"p":"p3"},"0-0-21":{"p":"p3"},"0-0-28":{"p":"p3"},"0-0-29":{"p":"p3"},"0-0-30":{"p":"p3"},"0-0-31":{"p":"p3"},"0-0-32":{"p":"p3"},"0-0-33":{"p":"p3"},"0-0-34":{"p":"p3"},"0-0-35":{"p":"p3"},"0-0-36":{"p":"p3"},"0-0-37":{"p":"p3"},"0-0-38":{"p":"p3"},"0-0-39":{"p":"p3"},"0-0-40":{"p":"p3"},"0-0-41":{"p":"p3"},"0-0-42":{"p":"p3"},"0-0-43":{"p":"p3"},"0-0-44":{"p":"p3"},"0-0-45":{"p":"p3"},"0-2-0":{"p":"p2"},"0-2-1":{"p":"p2"},"0-2-2":{"p":"p2"},"0-2-3":{"p":"p2"},"0-2-4":{"p":"p2"},"0-2-5":{"p":"p2"},"0-2-6":{"p":"p2"},"0-2-7":{"p":"p2"},"0-2-8":{"p":"p2"},"0-2-9":{"p":"p2"},"0-2-10":{"p":"p2"},"0-2-11":{"p":"p2"},"0-2-12":{"p":"p2"},"0-2-13":{"p":"p2"},"0-2-14":{"p":"p2"},"0-2-15":{"p":"p2"},"0-2-16":{"p":"p2"},"0-2-17":{"p":"p2"},"0-2-18":{"p":"p2"},"0-2-19":{"p":"p2"},"0-2-20":{"p":"p2"},"0-2-21":{"p":"p2"},"0-2-22":{"p":"p2"},"0-2-23":{"p":"p2"},"0-2-24":{"p":"p2"},"0-2-25":{"p":"p2"},"0-2-26":{"p":"p2"},"0-2-27":{"p":"p2"},"0-3-0":{"p":"p4"},"0-3-1":{"p":"p4"},"0-3-2":{"p":"p4"},"0-3-3":{"p":"p4"},"0-3-4":{"p":"p4"},"0-3-5":{"p":"p4"},"0-3-6":{"p":"p4"},"0-3-7":{"p":"p4"},"0-3-8":{"p":"p4"},"0-3-9":{"p":"p4"},"0-3-10":{"p":"p4"},"0-3-11":{"p":"p4"},"0-3-12":{"p":"p4"},"0-3-13":{"p":"p4"},"0-3-14":{"p":"p4"},"0-3-15":{"p":"p4"},"0-3-16":{"p":"p4"},"0-3-17":{"p":"p4"},"0-3-22":{"p":"p4"},"0-3-23":{"p":"p4"},"0-3-24":{"p":"p4"},"0-3-25":{"p":"p4"},"0-3-26":{"p":"p4"},"0-3-27":{"p":"p4"},"0-3-28":{"p":"p4"},"0-3-29":{"p":"p4"},"0-3-30":{"p":"p4"},"0-3-31":{"p":"p4"},"0-3-32":{"p":"p4"},"0-3-33":{"p":"p4"},"0-3-34":{"p":"p4"},"0-3-35":{"p":"p4"},"0-3-36":{"p":"p4"},"0-3-37":{"p":"p4"},"0-3-38":{"p":"p4"},"0-3-39":{"p":"p4"},"0-3-40":{"p":"p4"},"0-3-41":{"p":"p4"},"0-3-42":{"p":"p4"},"0-3-43":{"p":"p4"},"0-4-0":{"p":"p5"},"0-4-1":{"p":"p5"},"0-4-2":{"p":"p5"},"0-4-3":{"p":"p5"},"0-4-4":{"p":"p5"},"0-4-5":{"p":"p5"},"0-4-6":{"p":"p5"},"0-4-7":{"p":"p5"},"0-4-8":{"p":"p5"},"0-4-9":{"p":"p5"},"0-4-10":{"p":"p5"},"0-4-11":{"p":"p5"},"0-4-12":{"p":"p5"},"0-4-13":{"p":"p5"},"0-4-14":{"p":"p5"},"0-4-15":{"p":"p5"},"0-4-16":{"p":"p5"},"0-4-17":{"p":"p5"},"0-4-26":{"p":"p5"},"0-4-27":{"p":"p5"},"0-4-28":{"p":"p5"},"0-4-29":{"p":"p5"},"0-4-30":{"p":"p5"},"0-4-31":{"p":"p5"},"0-4-32":{"p":"p5"},"0-4-33":{"p":"p5"},"0-4-34":{"p":"p5"},"0-4-35":{"p":"p5"},"0-4-36":{"p":"p5"},"0-4-37":{"p":"p5"},"1-0-2":{"p":"p3"},"1-0-3":{"p":"p3"},"1-0-4":{"p":"p3"},"1-0-5":{"p":"p3"},"1-0-6":{"p":"p3"},"1-0-7":{"p":"p3"},"1-0-8":{"p":"p3"},"1-0-9":{"p":"p3"},"1-0-10":{"p":"p3"},"1-0-11":{"p":"p3"},"1-0-12":{"p":"p3"},"1-0-13":{"p":"p3"},"1-0-14":{"p":"p3"},"1-0-15":{"p":"p3"},"1-0-16":{"p":"p3"},"1-0-17":{"p":"p3"},"1-0-22":{"p":"p3"},"1-0-23":{"p":"p3"},"1-0-24":{"p":"p3"},"1-0-25":{"p":"p3"},"1-0-26":{"p":"p3"},"1-0-27":{"p":"p3"},"1-0-28":{"p":"p3"},"1-0-29":{"p":"p3"},"1-0-30":{"p":"p3"},"1-0-31":{"p":"p3"},"1-0-32":{"p":"p3"},"1-0-33":{"p":"p3"},"1-0-34":{"p":"p3"},"1-0-35":{"p":"p3"},"1-0-36":{"p":"p3"},"1-0-37":{"p":"p3"},"1-0-38":{"p":"p3"},"1-0-39":{"p":"p3"},"1-0-40":{"p":"p3"},"1-0-41":{"p":"p3"},"1-1-0":{"p":"p1"},"1-1-1":{"p":"p1"},"1-1-2":{"p":"p1"},"1-1-3":{"p":"p1"},"1-1-4":{"p":"p1"},"1-1-5":{"p":"p1"},"1-1-6":{"p":"p1"},"1-1-7":{"p":"p1"},"1-1-8":{"p":"p1"},"1-1-9":{"p":"p1"},"1-1-10":{"p":"p1"},"1-1-11":{"p":"p1"},"1-1-12":{"p":"p1"},"1-1-13":{"p":"p1"},"1-1-14":{"p":"p1"},"1-1-15":{"p":"p1"},"1-1-16":{"p":"p1"},"1-1-17":{"p":"p1"},"1-1-18":{"p":"p1"},"1-1-19":{"p":"p1"},"1-1-20":{"p":"p1"},"1-1-21":{"p":"p1"},"1-1-22":{"p":"p1"},"1-1-23":{"p":"p1"},"1-1-24":{"p":"p1"},"1-1-25":{"p":"p1"},"1-1-26":{"p":"p1"},"1-1-27":{"p":"p1"},"1-1-28":{"p":"p1"},"1-1-29":{"p":"p1"},"1-1-30":{"p":"p1"},"1-1-31":{"p":"p1"},"1-2-0":{"p":"p2"},"1-2-1":{"p":"p2"},"1-2-2":{"p":"p2"},"1-2-3":{"p":"p2"},"1-2-4":{"p":"p2"},"1-2-5":{"p":"p2"},"1-2-6":{"p":"p2"},"1-2-7":{"p":"p2"},"1-2-8":{"p":"p2"},"1-2-9":{"p":"p2"},"1-2-10":{"p":"p2"},"1-2-11":{"p":"p2"},"1-2-12":{"p":"p2"},"1-2-13":{"p":"p2"},"1-2-14":{"p":"p2"},"1-2-15":{"p":"p2"},"1-2-16":{"p":"p2"},"1-2-17":{"p":"p2"},"1-2-18":{"p":"p2"},"1-2-19":{"p":"p2"},"1-3-18":{"p":"p4"},"1-3-19":{"p":"p4"},"1-3-20":{"p":"p4"},"1-3-21":{"p":"p4"},"1-3-22":{"p":"p4"},"1-3-23":{"p":"p4"},"1-3-24":{"p":"p4"},"1-3-25":{"p":"p4"},"1-3-26":{"p":"p4"},"1-3-27":{"p":"p4"},"1-3-28":{"p":"p4"},"1-3-29":{"p":"p4"},"1-3-30":{"p":"p4"},"1-3-31":{"p":"p4"},"1-3-32":{"p":"p4"},"1-3-33":{"p":"p4"},"1-3-34":{"p":"p4"},"1-3-35":{"p":"p4"},"1-3-36":{"p":"p4"},"1-3-37":{"p":"p4"},"1-3-38":{"p":"p4"},"1-3-39":{"p":"p4"},"1-3-40":{"p":"p4"},"1-3-41":{"p":"p4"},"1-3-42":{"p":"p4"},"1-3-43":{"p":"p4"},"1-3-44":{"p":"p4"},"1-3-45":{"p":"p4"},"1-4-0":{"p":"p5"},"1-4-1":{"p":"p5"},"1-4-2":{"p":"p5"},"1-4-3":{"p":"p5"},"1-4-4":{"p":"p5"},"1-4-5":{"p":"p5"},"1-4-6":{"p":"p5"},"1-4-7":{"p":"p5"},"1-4-8":{"p":"p5"},"1-4-9":{"p":"p5"},"1-4-10":{"p":"p5"},"1-4-11":{"p":"p5"},"1-4-12":{"p":"p5"},"1-4-13":{"p":"p5"},"1-4-14":{"p":"p5"},"1-4-15":{"p":"p5"},"1-4-16":{"p":"p5"},"1-4-17":{"p":"p5"},"2-0-0":{"p":"p3"},"2-0-1":{"p":"p3"},"2-0-2":{"p":"p3"},"2-0-3":{"p":"p3"},"2-0-4":{"p":"p3"},"2-0-5":{"p":"p3"},"2-0-6":{"p":"p3"},"2-0-7":{"p":"p3"},"2-0-8":{"p":"p3"},"2-0-9":{"p":"p3"},"2-0-10":{"p":"p3"},"2-0-11":{"p":"p3"},"2-0-12":{"p":"p3"},"2-0-13":{"p":"p3"},"2-0-14":{"p":"p3"},"2-0-15":{"p":"p3"},"2-0-16":{"p":"p3"},"2-0-17":{"p":"p3"},"2-0-22":{"p":"p3"},"2-0-23":{"p":"p3"},"2-0-24":{"p":"p3"},"2-0-25":{"p":"p3"},"2-0-26":{"p":"p3"},"2-0-27":{"p":"p3"},"2-0-28":{"p":"p3"},"2-0-29":{"p":"p3"},"2-0-30":{"p":"p3"},"2-0-31":{"p":"p3"},"2-0-32":{"p":"p3"},"2-0-33":{"p":"p3"},"2-0-34":{"p":"p3"},"2-0-35":{"p":"p3"},"2-0-36":{"p":"p3"},"2-0-37":{"p":"p3"},"2-0-38":{"p":"p3"},"2-0-39":{"p":"p3"},"2-0-40":{"p":"p3"},"2-0-41":{"p":"p3"},"2-1-18":{"p":"p1"},"2-1-19":{"p":"p1"},"2-1-20":{"p":"p1"},"2-1-21":{"p":"p1"},"2-1-22":{"p":"p1"},"2-1-23":{"p":"p1"},"2-1-24":{"p":"p1"},"2-1-25":{"p":"p1"},"2-1-26":{"p":"p1"},"2-1-27":{"p":"p1"},"2-1-28":{"p":"p1"},"2-1-29":{"p":"p1"},"2-1-30":{"p":"p1"},"2-1-31":{"p":"p1"},"2-1-32":{"p":"p1"},"2-1-33":{"p":"p1"},"2-1-34":{"p":"p1"},"2-1-35":{"p":"p1"},"2-1-36":{"p":"p1"},"2-1-37":{"p":"p1"},"2-1-38":{"p":"p1"},"2-1-39":{"p":"p1"},"2-1-40":{"p":"p1"},"2-1-41":{"p":"p1"},"2-1-42":{"p":"p1"},"2-1-43":{"p":"p1"},"2-1-44":{"p":"p1"},"2-1-45":{"p":"p1"},"2-2-0":{"p":"p2"},"2-2-1":{"p":"p2"},"2-2-2":{"p":"p2"},"2-2-3":{"p":"p2"},"2-2-4":{"p":"p2"},"2-2-5":{"p":"p2"},"2-2-6":{"p":"p2"},"2-2-7":{"p":"p2"},"2-2-8":{"p":"p2"},"2-2-9":{"p":"p2"},"2-2-10":{"p":"p2"},"2-2-11":{"p":"p2"},"2-2-12":{"p":"p2"},"2-2-13":{"p":"p2"},"2-2-14":{"p":"p2"},"2-2-15":{"p":"p2"},"2-2-16":{"p":"p2"},"2-2-17":{"p":"p2"},"2-2-18":{"p":"p2"},"2-2-19":{"p":"p2"},"2-3-0":{"p":"p4"},"2-3-1":{"p":"p4"},"2-3-2":{"p":"p4"},"2-3-3":{"p":"p4"},"2-3-4":{"p":"p4"},"2-3-5":{"p":"p4"},"2-3-6":{"p":"p4"},"2-3-7":{"p":"p4"},"2-3-8":{"p":"p4"},"2-3-9":{"p":"p4"},"2-3-10":{"p":"p4"},"2-3-11":{"p":"p4"},"2-3-12":{"p":"p4"},"2-3-13":{"p":"p4"},"2-3-14":{"p":"p4"},"2-3-15":{"p":"p4"},"2-3-16":{"p":"p4"},"2-3-17":{"p":"p4"},"2-3-18":{"p":"p4"},"2-3-19":{"p":"p4"},"2-3-20":{"p":"p4"},"2-3-21":{"p":"p4"},"2-3-22":{"p":"p4"},"2-3-23":{"p":"p4"},"2-3-24":{"p":"p4"},"2-3-25":{"p":"p4"},"2-3-26":{"p":"p4"},"2-3-27":{"p":"p4"},"2-3-28":{"p":"p4"},"2-3-29":{"p":"p4"},"2-3-30":{"p":"p4"},"2-3-31":{"p":"p4"},"3-0-0":{"p":"p3"},"3-0-1":{"p":"p3"},"3-0-2":{"p":"p3"},"3-0-3":{"p":"p3"},"3-0-4":{"p":"p3"},"3-0-5":{"p":"p3"},"3-0-6":{"p":"p3"},"3-0-7":{"p":"p3"},"3-0-8":{"p":"p3"},"3-0-9":{"p":"p3"},"3-0-10":{"p":"p3"},"3-0-11":{"p":"p3"},"3-0-12":{"p":"p3"},"3-0-13":{"p":"p3"},"3-0-14":{"p":"p3"},"3-0-15":{"p":"p3"},"3-0-16":{"p":"p3"},"3-0-17":{"p":"p3"},"3-0-18":{"p":"p3"},"3-0-19":{"p":"p3"},"3-0-20":{"p":"p3"},"3-0-21":{"p":"p3"},"3-0-22":{"p":"p3"},"3-0-23":{"p":"p3"},"3-0-24":{"p":"p3"},"3-0-25":{"p":"p3"},"3-1-2":{"p":"p1"},"3-1-3":{"p":"p1"},"3-1-4":{"p":"p1"},"3-1-5":{"p":"p1"},"3-1-6":{"p":"p1"},"3-1-7":{"p":"p1"},"3-1-8":{"p":"p1"},"3-1-9":{"p":"p1"},"3-1-10":{"p":"p1"},"3-1-11":{"p":"p1"},"3-1-12":{"p":"p1"},"3-1-13":{"p":"p1"},"3-1-14":{"p":"p1"},"3-1-15":{"p":"p1"},"3-1-16":{"p":"p1"},"3-1-17":{"p":"p1"},"3-1-18":{"p":"p1"},"3-1-19":{"p":"p1"},"3-1-20":{"p":"p1"},"3-1-21":{"p":"p1"},"3-1-26":{"p":"p1"},"3-1-27":{"p":"p1"},"3-1-28":{"p":"p1"},"3-1-29":{"p":"p1"},"3-1-30":{"p":"p1"},"3-1-31":{"p":"p1"},"3-1-32":{"p":"p1"},"3-1-33":{"p":"p1"},"3-1-34":{"p":"p1"},"3-1-35":{"p":"p1"},"3-1-36":{"p":"p1"},"3-1-37":{"p":"p1"},"3-1-38":{"p":"p1"},"3-1-39":{"p":"p1"},"3-1-40":{"p":"p1"},"3-1-41":{"p":"p1"},"3-1-42":{"p":"p1"},"3-1-43":{"p":"p1"},"3-1-44":{"p":"p1"},"3-1-45":{"p":"p1"},"3-2-0":{"p":"p2"},"3-2-1":{"p":"p2"},"3-2-2":{"p":"p2"},"3-2-3":{"p":"p2"},"3-2-4":{"p":"p2"},"3-2-5":{"p":"p2"},"3-2-6":{"p":"p2"},"3-2-7":{"p":"p2"},"3-2-8":{"p":"p2"},"3-2-9":{"p":"p2"},"3-2-10":{"p":"p2"},"3-2-11":{"p":"p2"},"3-2-12":{"p":"p2"},"3-2-13":{"p":"p2"},"3-2-14":{"p":"p2"},"3-2-15":{"p":"p2"},"3-2-16":{"p":"p2"},"3-2-17":{"p":"p2"},"3-2-18":{"p":"p2"},"3-2-19":{"p":"p2"},"3-2-20":{"p":"p2"},"3-2-21":{"p":"p2"},"3-2-22":{"p":"p2"},"3-2-23":{"p":"p2"},"3-2-24":{"p":"p2"},"3-2-25":{"p":"p2"},"3-4-2":{"p":"p5"},"3-4-3":{"p":"p5"},"3-4-4":{"p":"p5"},"3-4-5":{"p":"p5"},"3-4-6":{"p":"p5"},"3-4-7":{"p":"p5"},"3-4-8":{"p":"p5"},"3-4-9":{"p":"p5"},"3-4-10":{"p":"p5"},"3-4-11":{"p":"p5"},"3-4-12":{"p":"p5"},"3-4-13":{"p":"p5"},"3-4-14":{"p":"p5"},"3-4-15":{"p":"p5"},"3-4-16":{"p":"p5"},"3-4-17":{"p":"p5"},"3-4-26":{"p":"p5"},"3-4-27":{"p":"p5"},"3-4-28":{"p":"p5"},"3-4-29":{"p":"p5"},"3-4-30":{"p":"p5"},"3-4-31":{"p":"p5"},"3-4-32":{"p":"p5"},"3-4-33":{"p":"p5"},"3-4-34":{"p":"p5"},"3-4-35":{"p":"p5"},"3-4-36":{"p":"p5"},"3-4-37":{"p":"p5"},"3-4-38":{"p":"p5"},"3-4-39":{"p":"p5"},"3-4-40":{"p":"p5"},"3-4-41":{"p":"p5"},"4-1-0":{"p":"p1"},"4-1-1":{"p":"p1"},"4-1-2":{"p":"p1"},"4-1-3":{"p":"p1"},"4-1-4":{"p":"p1"},"4-1-5":{"p":"p1"},"4-1-6":{"p":"p1"},"4-1-7":{"p":"p1"},"4-1-8":{"p":"p1"},"4-1-9":{"p":"p1"},"4-1-10":{"p":"p1"},"4-1-11":{"p":"p1"},"4-1-12":{"p":"p1"},"4-1-13":{"p":"p1"},"4-1-14":{"p":"p1"},"4-1-15":{"p":"p1"},"4-1-16":{"p":"p1"},"4-1-17":{"p":"p1"},"4-1-22":{"p":"p1"},"4-1-23":{"p":"p1"},"4-1-24":{"p":"p1"},"4-1-25":{"p":"p1"},"4-1-26":{"p":"p1"},"4-1-27":{"p":"p1"},"4-1-28":{"p":"p1"},"4-1-29":{"p":"p1"},"4-1-30":{"p":"p1"},"4-1-31":{"p":"p1"},"4-1-32":{"p":"p1"},"4-1-33":{"p":"p1"},"4-1-34":{"p":"p1"},"4-1-35":{"p":"p1"},"4-1-36":{"p":"p1"},"4-1-37":{"p":"p1"},"4-1-38":{"p":"p1"},"4-1-39":{"p":"p1"},"4-1-40":{"p":"p1"},"4-1-41":{"p":"p1"},"4-1-42":{"p":"p1"},"4-1-43":{"p":"p1"},"4-2-0":{"p":"p2"},"4-2-1":{"p":"p2"},"4-2-2":{"p":"p2"},"4-2-3":{"p":"p2"},"4-2-4":{"p":"p2"},"4-2-5":{"p":"p2"},"4-2-6":{"p":"p2"},"4-2-7":{"p":"p2"},"4-2-8":{"p":"p2"},"4-2-9":{"p":"p2"},"4-2-10":{"p":"p2"},"4-2-11":{"p":"p2"},"4-2-12":{"p":"p2"},"4-2-13":{"p":"p2"},"4-2-14":{"p":"p2"},"4-2-15":{"p":"p2"},"4-2-16":{"p":"p2"},"4-2-17":{"p":"p2"},"4-2-18":{"p":"p2"},"4-2-19":{"p":"p2"},"4-2-20":{"p":"p2"},"4-2-21":{"p":"p2"},"4-2-22":{"p":"p2"},"4-2-23":{"p":"p2"},"4-2-24":{"p":"p2"},"4-2-25":{"p":"p2"},"4-2-26":{"p":"p2"},"4-2-27":{"p":"p2"},"4-3-2":{"p":"p4"},"4-3-3":{"p":"p4"},"4-3-4":{"p":"p4"},"4-3-5":{"p":"p4"},"4-3-6":{"p":"p4"},"4-3-7":{"p":"p4"},"4-3-8":{"p":"p4"},"4-3-9":{"p":"p4"},"4-3-10":{"p":"p4"},"4-3-11":{"p":"p4"},"4-3-12":{"p":"p4"},"4-3-13":{"p":"p4"},"4-3-14":{"p":"p4"},"4-3-15":{"p":"p4"},"4-3-16":{"p":"p4"},"4-3-17":{"p":"p4"},"4-3-18":{"p":"p4"},"4-3-19":{"p":"p4"},"4-3-20":{"p":"p4"},"4-3-21":{"p":"p4"},"4-3-26":{"p":"p4"},"4-3-27":{"p":"p4"},"4-3-28":{"p":"p4"},"4-3-29":{"p":"p4"},"4-3-30":{"p":"p4"},"4-3-31":{"p":"p4"},"4-3-32":{"p":"p4"},"4-3-33":{"p":"p4"},"4-3-34":{"p":"p4"},"4-3-35":{"p":"p4"},"4-3-36":{"p":"p4"},"4-3-37":{"p":"p4"},"4-3-38":{"p":"p4"},"4-3-39":{"p":"p4"},"4-3-40":{"p":"p4"},"4-3-41":{"p":"p4"},"4-3-42":{"p":"p4"},"4-3-43":{"p":"p4"},"4-3-44":{"p":"p4"},"4-3-45":{"p":"p4"},"4-4-2":{"p":"p5"},"4-4-3":{"p":"p5"},"4-4-4":{"p":"p5"},"4-4-5":{"p":"p5"},"4-4-6":{"p":"p5"},"4-4-7":{"p":"p5"},"4-4-8":{"p":"p5"},"4-4-9":{"p":"p5"},"4-4-10":{"p":"p5"},"4-4-11":{"p":"p5"},"4-4-12":{"p":"p5"},"4-4-13":{"p":"p5"},"4-4-14":{"p":"p5"},"4-4-15":{"p":"p5"},"4-4-16":{"p":"p5"},"4-4-17":{"p":"p5"},"5-0-18":{"x":1},"5-0-19":{"x":1},"5-0-20":{"x":1},"5-0-21":{"x":1},"5-0-22":{"x":1},"5-0-23":{"x":1},"5-0-24":{"x":1},"5-0-25":{"x":1},"5-0-26":{"x":1},"5-0-27":{"x":1},"5-0-28":{"x":1},"5-0-29":{"x":1},"5-0-30":{"x":1},"5-0-31":{"x":1},"5-0-32":{"x":1},"5-0-33":{"x":1},"5-0-34":{"x":1},"5-0-35":{"x":1},"5-0-36":{"x":1},"5-0-37":{"x":1},"5-0-38":{"x":1},"5-0-39":{"x":1},"5-0-40":{"x":1},"5-0-41":{"x":1},"5-0-42":{"x":1},"5-0-43":{"x":1},"5-0-44":{"x":1},"5-0-45":{"x":1},"5-1-18":{"x":1},"5-1-19":{"x":1},"5-1-20":{"x":1},"5-1-21":{"x":1},"5-1-22":{"x":1},"5-1-23":{"x":1},"5-1-24":{"x":1},"5-1-25":{"x":1},"5-1-26":{"x":1},"5-1-27":{"x":1},"5-1-28":{"x":1},"5-1-29":{"x":1},"5-1-30":{"x":1},"5-1-31":{"x":1},"5-1-32":{"x":1},"5-1-33":{"x":1},"5-1-34":{"x":1},"5-1-35":{"x":1},"5-1-36":{"x":1},"5-1-37":{"x":1},"5-1-38":{"x":1},"5-1-39":{"x":1},"5-1-40":{"x":1},"5-1-41":{"x":1},"5-1-42":{"x":1},"5-1-43":{"x":1},"5-1-44":{"x":1},"5-1-45":{"x":1},"5-2-0":{"p":"p2"},"5-2-1":{"p":"p2"},"5-2-2":{"p":"p2"},"5-2-3":{"p":"p2"},"5-2-4":{"p":"p2"},"5-2-5":{"p":"p2"},"5-2-6":{"p":"p2"},"5-2-7":{"p":"p2"},"5-2-8":{"p":"p2"},"5-2-9":{"p":"p2"},"5-2-10":{"p":"p2"},"5-2-11":{"p":"p2"},"5-2-12":{"p":"p2"},"5-2-13":{"p":"p2"},"5-2-14":{"p":"p2"},"5-2-15":{"p":"p2"},"5-2-16":{"p":"p2"},"5-2-17":{"p":"p2"},"5-2-18":{"x":1},"5-2-19":{"x":1},"5-2-20":{"x":1},"5-2-21":{"x":1},"5-2-22":{"x":1},"5-2-23":{"x":1},"5-2-24":{"x":1},"5-2-25":{"x":1},"5-2-26":{"x":1},"5-2-27":{"x":1},"5-2-28":{"x":1},"5-2-29":{"x":1},"5-2-30":{"x":1},"5-2-31":{"x":1},"5-2-32":{"x":1},"5-2-33":{"x":1},"5-2-34":{"x":1},"5-2-35":{"x":1},"5-2-36":{"x":1},"5-2-37":{"x":1},"5-2-38":{"x":1},"5-2-39":{"x":1},"5-2-40":{"x":1},"5-2-41":{"x":1},"5-2-42":{"x":1},"5-2-43":{"x":1},"5-2-44":{"x":1},"5-2-45":{"x":1},"5-3-18":{"x":1},"5-3-19":{"x":1},"5-3-20":{"x":1},"5-3-21":{"x":1},"5-3-22":{"x":1},"5-3-23":{"x":1},"5-3-24":{"x":1},"5-3-25":{"x":1},"5-3-26":{"x":1},"5-3-27":{"x":1},"5-3-28":{"x":1},"5-3-29":{"x":1},"5-3-30":{"x":1},"5-3-31":{"x":1},"5-3-32":{"x":1},"5-3-33":{"x":1},"5-3-34":{"x":1},"5-3-35":{"x":1},"5-3-36":{"x":1},"5-3-37":{"x":1},"5-3-38":{"x":1},"5-3-39":{"x":1},"5-3-40":{"x":1},"5-3-41":{"x":1},"5-3-42":{"x":1},"5-3-43":{"x":1},"5-3-44":{"x":1},"5-3-45":{"x":1},"5-4-18":{"x":1},"5-4-19":{"x":1},"5-4-20":{"x":1},"5-4-21":{"x":1},"5-4-22":{"x":1},"5-4-23":{"x":1},"5-4-24":{"x":1},"5-4-25":{"x":1},"5-4-26":{"x":1},"5-4-27":{"x":1},"5-4-28":{"x":1},"5-4-29":{"x":1},"5-4-30":{"x":1},"5-4-31":{"x":1},"5-4-32":{"x":1},"5-4-33":{"x":1},"5-4-34":{"x":1},"5-4-35":{"x":1},"5-4-36":{"x":1},"5-4-37":{"x":1},"5-4-38":{"x":1},"5-4-39":{"x":1},"5-4-40":{"x":1},"5-4-41":{"x":1},"5-4-42":{"x":1},"5-4-43":{"x":1},"5-4-44":{"x":1},"5-4-45":{"x":1}},"B":{"0-1-0":{"p":"p1"},"0-1-1":{"p":"p1"},"0-1-2":{"p":"p1"},"0-1-3":{"p":"p1"},"0-1-4":{"p":"p1"},"0-1-5":{"p":"p1"},"0-1-6":{"p":"p1"},"0-1-7":{"p":"p1"},"0-1-8":{"p":"p1"},"0-1-9":{"p":"p1"},"0-1-10":{"p":"p1"},"0-1-11":{"p":"p1"},"0-1-12":{"p":"p1"},"0-1-13":{"p":"p1"},"0-1-14":{"p":"p1"},"0-1-15":{"p":"p1"},"0-1-16":{"p":"p1"},"0-1-17":{"p":"p1"},"0-1-18":{"p":"p1"},"0-1-19":{"p":"p1"},"0-1-20":{"p":"p1"},"0-1-21":{"p":"p1"},"0-1-22":{"p":"p1"},"0-1-23":{"p":"p1"},"0-1-24":{"p":"p1"},"0-1-25":{"p":"p1"},"0-1-26":{"p":"p1"},"0-1-27":{"p":"p1"},"0-1-28":{"p":"p1"},"0-1-29":{"p":"p1"},"0-1-30":{"p":"p1"},"0-1-31":{"p":"p1"},"0-2-0":{"p":"p2"},"0-2-1":{"p":"p2"},"0-2-2":{"p":"p2"},"0-2-3":{"p":"p2"},"0-2-4":{"p":"p2"},"0-2-5":{"p":"p2"},"0-2-6":{"p":"p2"},"0-2-7":{"p":"p2"},"0-2-8":{"p":"p2"},"0-2-9":{"p":"p2"},"0-2-10":{"p":"p2"},"0-2-11":{"p":"p2"},"0-2-12":{"p":"p2"},"0-2-13":{"p":"p2"},"0-2-14":{"p":"p2"},"0-2-15":{"p":"p2"},"0-2-16":{"p":"p2"},"0-2-17":{"p":"p2"},"0-2-18":{"p":"p2"},"0-2-19":{"p":"p2"},"0-2-20":{"p":"p2"},"0-2-21":{"p":"p2"},"0-2-22":{"p":"p2"},"0-2-23":{"p":"p2"},"0-2-24":{"p":"p2"},"0-2-25":{"p":"p2"},"0-2-26":{"p":"p2"},"0-2-27":{"p":"p2"},"0-3-0":{"p":"p4"},"0-3-1":{"p":"p4"},"0-3-2":{"p":"p4"},"0-3-3":{"p":"p4"},"0-3-4":{"p":"p4"},"0-3-5":{"p":"p4"},"0-3-6":{"p":"p4"},"0-3-7":{"p":"p4"},"0-3-8":{"p":"p4"},"0-3-9":{"p":"p4"},"0-3-10":{"p":"p4"},"0-3-11":{"p":"p4"},"0-3-12":{"p":"p4"},"0-3-13":{"p":"p4"},"0-3-14":{"p":"p4"},"0-3-15":{"p":"p4"},"0-3-16":{"p":"p4"},"0-3-17":{"p":"p4"},"0-3-18":{"p":"p4"},"0-3-19":{"p":"p4"},"0-3-20":{"p":"p4"},"0-3-21":{"p":"p4"},"0-3-28":{"p":"p4"},"0-3-29":{"p":"p4"},"0-3-30":{"p":"p4"},"0-3-31":{"p":"p4"},"0-3-32":{"p":"p4"},"0-3-33":{"p":"p4"},"0-3-34":{"p":"p4"},"0-3-35":{"p":"p4"},"0-3-36":{"p":"p4"},"0-3-37":{"p":"p4"},"0-3-38":{"p":"p4"},"0-3-39":{"p":"p4"},"0-3-40":{"p":"p4"},"0-3-41":{"p":"p4"},"0-3-42":{"p":"p4"},"0-3-43":{"p":"p4"},"0-3-44":{"p":"p4"},"0-3-45":{"p":"p4"},"0-4-0":{"p":"p5"},"0-4-1":{"p":"p5"},"0-4-2":{"p":"p5"},"0-4-3":{"p":"p5"},"0-4-4":{"p":"p5"},"0-4-5":{"p":"p5"},"0-4-6":{"p":"p5"},"0-4-7":{"p":"p5"},"0-4-8":{"p":"p5"},"0-4-9":{"p":"p5"},"0-4-10":{"p":"p5"},"0-4-11":{"p":"p5"},"0-4-12":{"p":"p5"},"0-4-13":{"p":"p5"},"0-4-14":{"p":"p5"},"0-4-15":{"p":"p5"},"0-4-16":{"p":"p5"},"0-4-17":{"p":"p5"},"0-4-26":{"p":"p5"},"0-4-27":{"p":"p5"},"0-4-28":{"p":"p5"},"0-4-29":{"p":"p5"},"0-4-30":{"p":"p5"},"0-4-31":{"p":"p5"},"0-4-32":{"p":"p5"},"0-4-33":{"p":"p5"},"0-4-34":{"p":"p5"},"0-4-35":{"p":"p5"},"0-4-36":{"p":"p5"},"0-4-37":{"p":"p5"},"0-4-38":{"p":"p5"},"0-4-39":{"p":"p5"},"0-4-40":{"p":"p5"},"0-4-41":{"p":"p5"},"1-0-0":{"p":"p3"},"1-0-1":{"p":"p3"},"1-0-2":{"p":"p3"},"1-0-3":{"p":"p3"},"1-0-4":{"p":"p3"},"1-0-5":{"p":"p3"},"1-0-6":{"p":"p3"},"1-0-7":{"p":"p3"},"1-0-8":{"p":"p3"},"1-0-9":{"p":"p3"},"1-0-10":{"p":"p3"},"1-0-11":{"p":"p3"},"1-0-12":{"p":"p3"},"1-0-13":{"p":"p3"},"1-0-14":{"p":"p3"},"1-0-15":{"p":"p3"},"1-0-16":{"p":"p3"},"1-0-17":{"p":"p3"},"1-0-18":{"p":"p3"},"1-0-19":{"p":"p3"},"1-0-20":{"p":"p3","P":1},"1-0-21":{"p":"p3","P":1},"1-0-22":{"p":"p3"},"1-0-23":{"p":"p3"},"1-0-24":{"p":"p3"},"1-0-25":{"p":"p3"},"1-0-26":{"p":"p3"},"1-0-27":{"p":"p3"},"1-0-28":{"p":"p3"},"1-0-29":{"p":"p3"},"1-0-30":{"p":"p3"},"1-0-31":{"p":"p3"},"1-1-0":{"p":"p1"},"1-1-1":{"p":"p1"},"1-1-2":{"p":"p1"},"1-1-3":{"p":"p1"},"1-1-4":{"p":"p1"},"1-1-5":{"p":"p1"},"1-1-6":{"p":"p1"},"1-1-7":{"p":"p1"},"1-1-8":{"p":"p1"},"1-1-9":{"p":"p1"},"1-1-10":{"p":"p1"},"1-1-11":{"p":"p1"},"1-1-12":{"p":"p1"},"1-1-13":{"p":"p1"},"1-1-14":{"p":"p1"},"1-1-15":{"p":"p1"},"1-1-16":{"p":"p1"},"1-1-17":{"p":"p1"},"1-1-18":{"p":"p1"},"1-1-19":{"p":"p1"},"1-1-20":{"p":"p1"},"1-1-21":{"p":"p1"},"1-2-0":{"p":"p2"},"1-2-1":{"p":"p2"},"1-2-2":{"p":"p2"},"1-2-3":{"p":"p2"},"1-2-4":{"p":"p2"},"1-2-5":{"p":"p2"},"1-2-6":{"p":"p2"},"1-2-7":{"p":"p2"},"1-2-8":{"p":"p2"},"1-2-9":{"p":"p2"},"1-2-10":{"p":"p2"},"1-2-11":{"p":"p2"},"1-2-12":{"p":"p2"},"1-2-13":{"p":"p2"},"1-2-14":{"p":"p2"},"1-2-15":{"p":"p2"},"1-2-16":{"p":"p2"},"1-2-17":{"p":"p2"},"1-2-18":{"p":"p2"},"1-2-19":{"p":"p2"},"1-2-20":{"p":"p2"},"1-2-21":{"p":"p2"},"1-2-22":{"p":"p2"},"1-2-23":{"p":"p2"},"1-2-24":{"p":"p2"},"1-2-25":{"p":"p2"},"1-2-26":{"p":"p2"},"1-2-27":{"p":"p2"},"1-3-2":{"p":"p4"},"1-3-3":{"p":"p4"},"1-3-4":{"p":"p4"},"1-3-5":{"p":"p4"},"1-3-6":{"p":"p4"},"1-3-7":{"p":"p4"},"1-3-8":{"p":"p4"},"1-3-9":{"p":"p4"},"1-3-10":{"p":"p4"},"1-3-11":{"p":"p4"},"1-3-12":{"p":"p4"},"1-3-13":{"p":"p4"},"1-3-14":{"p":"p4"},"1-3-15":{"p":"p4"},"1-3-16":{"p":"p4"},"1-3-17":{"p":"p4"},"1-3-22":{"p":"p4"},"1-3-23":{"p":"p4"},"1-3-24":{"p":"p4"},"1-3-25":{"p":"p4"},"1-3-26":{"p":"p4"},"1-3-27":{"p":"p4"},"1-3-28":{"p":"p4"},"1-3-29":{"p":"p4"},"1-3-30":{"p":"p4"},"1-3-31":{"p":"p4"},"1-3-32":{"p":"p4"},"1-3-33":{"p":"p4"},"1-3-34":{"p":"p4"},"1-3-35":{"p":"p4"},"1-3-36":{"p":"p4"},"1-3-37":{"p":"p4"},"1-3-38":{"p":"p4"},"1-3-39":{"p":"p4"},"1-3-40":{"p":"p4"},"1-3-41":{"p":"p4"},"1-4-28":{"p":"p5"},"1-4-29":{"p":"p5"},"1-4-30":{"p":"p5"},"1-4-31":{"p":"p5"},"1-4-32":{"p":"p5"},"1-4-33":{"p":"p5"},"1-4-34":{"p":"p5"},"1-4-35":{"p":"p5"},"1-4-36":{"p":"p5"},"1-4-37":{"p":"p5"},"1-4-38":{"p":"p5"},"1-4-39":{"p":"p5"},"1-4-40":{"p":"p5"},"1-4-41":{"p":"p5"},"1-4-42":{"p":"p5"},"1-4-43":{"p":"p5"},"1-4-44":{"p":"p5"},"1-4-45":{"p":"p5"},"2-0-18":{"p":"p3"},"2-0-19":{"p":"p3"},"2-0-20":{"p":"p3"},"2-0-21":{"p":"p3"},"2-0-22":{"p":"p3"},"2-0-23":{"p":"p3"},"2-0-24":{"p":"p3","P":1},"2-0-25":{"p":"p3","P":1},"2-0-26":{"p":"p3"},"2-0-27":{"p":"p3"},"2-0-28":{"p":"p3"},"2-0-29":{"p":"p3"},"2-0-30":{"p":"p3"},"2-0-31":{"p":"p3"},"2-0-32":{"p":"p3"},"2-0-33":{"p":"p3"},"2-0-34":{"p":"p3"},"2-0-35":{"p":"p3"},"2-0-36":{"p":"p3"},"2-0-37":{"p":"p3"},"2-0-38":{"p":"p3"},"2-0-39":{"p":"p3"},"2-0-40":{"p":"p3"},"2-0-41":{"p":"p3"},"2-0-42":{"p":"p3"},"2-0-43":{"p":"p3"},"2-0-44":{"p":"p3"},"2-0-45":{"p":"p3"},"2-2-0":{"p":"p2"},"2-2-1":{"p":"p2"},"2-2-2":{"p":"p2"},"2-2-3":{"p":"p2"},"2-2-4":{"p":"p2"},"2-2-5":{"p":"p2"},"2-2-6":{"p":"p2"},"2-2-7":{"p":"p2"},"2-2-8":{"p":"p2"},"2-2-9":{"p":"p2"},"2-2-10":{"p":"p2"},"2-2-11":{"p":"p2"},"2-2-12":{"p":"p2"},"2-2-13":{"p":"p2"},"2-2-14":{"p":"p2"},"2-2-15":{"p":"p2"},"2-2-16":{"p":"p2"},"2-2-17":{"p":"p2"},"2-2-18":{"p":"p2"},"2-2-19":{"p":"p2"},"2-2-20":{"p":"p2"},"2-2-21":{"p":"p2"},"2-2-22":{"p":"p2"},"2-2-23":{"p":"p2"},"2-2-24":{"p":"p2"},"2-2-25":{"p":"p2"},"2-2-26":{"p":"p2"},"2-2-27":{"p":"p2"},"2-3-0":{"p":"p4"},"2-3-1":{"p":"p4"},"2-3-2":{"p":"p4"},"2-3-3":{"p":"p4"},"2-3-4":{"p":"p4"},"2-3-5":{"p":"p4"},"2-3-6":{"p":"p4"},"2-3-7":{"p":"p4"},"2-3-8":{"p":"p4"},"2-3-9":{"p":"p4"},"2-3-10":{"p":"p4"},"2-3-11":{"p":"p4"},"2-3-12":{"p":"p4"},"2-3-13":{"p":"p4"},"2-3-14":{"p":"p4"},"2-3-15":{"p":"p4"},"2-3-16":{"p":"p4"},"2-3-17":{"p":"p4"},"2-3-22":{"p":"p4"},"2-3-23":{"p":"p4"},"2-3-24":{"p":"p4"},"2-3-25":{"p":"p4"},"2-3-26":{"p":"p4"},"2-3-27":{"p":"p4"},"2-3-28":{"p":"p4"},"2-3-29":{"p":"p4"},"2-3-30":{"p":"p4"},"2-3-31":{"p":"p4"},"2-3-32":{"p":"p4"},"2-3-33":{"p":"p4"},"2-3-34":{"p":"p4"},"2-3-35":{"p":"p4"},"2-3-36":{"p":"p4"},"2-3-37":{"p":"p4"},"2-3-38":{"p":"p4"},"2-3-39":{"p":"p4"},"2-3-40":{"p":"p4"},"2-3-41":{"p":"p4"},"2-4-4":{"p":"p5"},"2-4-5":{"p":"p5"},"2-4-6":{"p":"p5"},"2-4-7":{"p":"p5"},"2-4-8":{"p":"p5"},"2-4-9":{"p":"p5"},"2-4-10":{"p":"p5"},"2-4-11":{"p":"p5"},"2-4-12":{"p":"p5"},"2-4-13":{"p":"p5"},"2-4-14":{"p":"p5"},"2-4-15":{"p":"p5"},"2-4-16":{"p":"p5"},"2-4-17":{"p":"p5"},"3-0-2":{"p":"p3"},"3-0-3":{"p":"p3"},"3-0-4":{"p":"p3"},"3-0-5":{"p":"p3"},"3-0-6":{"p":"p3"},"3-0-7":{"p":"p3"},"3-0-8":{"p":"p3"},"3-0-9":{"p":"p3"},"3-0-10":{"p":"p3"},"3-0-11":{"p":"p3"},"3-0-12":{"p":"p3"},"3-0-13":{"p":"p3"},"3-0-14":{"p":"p3"},"3-0-15":{"p":"p3"},"3-0-16":{"p":"p3"},"3-0-17":{"p":"p3"},"3-0-18":{"p":"p3"},"3-0-19":{"p":"p3"},"3-0-20":{"p":"p3"},"3-0-21":{"p":"p3"},"3-0-26":{"p":"p3"},"3-0-27":{"p":"p3"},"3-0-28":{"p":"p3"},"3-0-29":{"p":"p3"},"3-0-30":{"p":"p3"},"3-0-31":{"p":"p3"},"3-0-32":{"p":"p3"},"3-0-33":{"p":"p3"},"3-0-34":{"p":"p3"},"3-0-35":{"p":"p3"},"3-0-36":{"p":"p3"},"3-0-37":{"p":"p3"},"3-0-38":{"p":"p3"},"3-0-39":{"p":"p3"},"3-0-40":{"p":"p3"},"3-0-41":{"p":"p3"},"3-0-42":{"p":"p3"},"3-0-43":{"p":"p3"},"3-0-44":{"p":"p3"},"3-0-45":{"p":"p3"},"3-1-0":{"p":"p1"},"3-1-1":{"p":"p1"},"3-1-2":{"p":"p1"},"3-1-3":{"p":"p1"},"3-1-4":{"p":"p1"},"3-1-5":{"p":"p1"},"3-1-6":{"p":"p1"},"3-1-7":{"p":"p1"},"3-1-8":{"p":"p1"},"3-1-9":{"p":"p1"},"3-1-10":{"p":"p1"},"3-1-11":{"p":"p1"},"3-1-12":{"p":"p1"},"3-1-13":{"p":"p1"},"3-1-14":{"p":"p1"},"3-1-15":{"p":"p1"},"3-1-16":{"p":"p1"},"3-1-17":{"p":"p1"},"3-1-22":{"p":"p1"},"3-1-23":{"p":"p1"},"3-1-24":{"p":"p1"},"3-1-25":{"p":"p1"},"3-1-26":{"p":"p1"},"3-1-27":{"p":"p1"},"3-1-28":{"p":"p1"},"3-1-29":{"p":"p1"},"3-1-30":{"p":"p1"},"3-1-31":{"p":"p1"},"3-1-32":{"p":"p1"},"3-1-33":{"p":"p1"},"3-1-34":{"p":"p1"},"3-1-35":{"p":"p1"},"3-1-36":{"p":"p1"},"3-1-37":{"p":"p1"},"3-1-38":{"p":"p1"},"3-1-39":{"p":"p1"},"3-1-40":{"p":"p1"},"3-1-41":{"p":"p1"},"3-2-0":{"p":"p2"},"3-2-1":{"p":"p2"},"3-2-2":{"p":"p2"},"3-2-3":{"p":"p2"},"3-2-4":{"p":"p2"},"3-2-5":{"p":"p2"},"3-2-6":{"p":"p2"},"3-2-7":{"p":"p2"},"3-2-8":{"p":"p2"},"3-2-9":{"p":"p2"},"3-2-10":{"p":"p2"},"3-2-11":{"p":"p2"},"3-2-12":{"p":"p2"},"3-2-13":{"p":"p2"},"3-2-14":{"p":"p2"},"3-2-15":{"p":"p2"},"3-2-16":{"p":"p2"},"3-2-17":{"p":"p2"},"3-2-18":{"p":"p2"},"3-2-19":{"p":"p2"},"3-2-20":{"p":"p2"},"3-2-21":{"p":"p2"},"3-2-22":{"p":"p2"},"3-2-23":{"p":"p2"},"3-2-24":{"p":"p2"},"3-2-25":{"p":"p2"},"3-2-26":{"p":"p2"},"3-2-27":{"p":"p2"},"3-3-0":{"p":"p4"},"3-3-1":{"p":"p4"},"3-3-2":{"p":"p4"},"3-3-3":{"p":"p4"},"3-3-4":{"p":"p4"},"3-3-5":{"p":"p4"},"3-3-6":{"p":"p4"},"3-3-7":{"p":"p4"},"3-3-8":{"p":"p4"},"3-3-9":{"p":"p4"},"3-3-10":{"p":"p4"},"3-3-11":{"p":"p4"},"3-3-12":{"p":"p4"},"3-3-13":{"p":"p4"},"3-3-14":{"p":"p4"},"3-3-15":{"p":"p4"},"3-3-16":{"p":"p4"},"3-3-17":{"p":"p4"},"3-3-18":{"p":"p4"},"3-3-19":{"p":"p4"},"3-3-20":{"p":"p4"},"3-3-21":{"p":"p4"},"3-3-22":{"p":"p4"},"3-3-23":{"p":"p4"},"3-3-24":{"p":"p4"},"3-3-25":{"p":"p4"},"4-0-0":{"p":"p3"},"4-0-1":{"p":"p3"},"4-0-2":{"p":"p3"},"4-0-3":{"p":"p3"},"4-0-4":{"p":"p3"},"4-0-5":{"p":"p3"},"4-0-6":{"p":"p3"},"4-0-7":{"p":"p3"},"4-0-8":{"p":"p3"},"4-0-9":{"p":"p3"},"4-0-10":{"p":"p3"},"4-0-11":{"p":"p3"},"4-0-12":{"p":"p3"},"4-0-13":{"p":"p3"},"4-0-14":{"p":"p3"},"4-0-15":{"p":"p3"},"4-0-16":{"p":"p3"},"4-0-17":{"p":"p3"},"4-0-22":{"p":"p3"},"4-0-23":{"p":"p3"},"4-0-24":{"p":"p3"},"4-0-25":{"p":"p3"},"4-0-26":{"p":"p3"},"4-0-27":{"p":"p3"},"4-0-28":{"p":"p3"},"4-0-29":{"p":"p3"},"4-0-30":{"p":"p3"},"4-0-31":{"p":"p3"},"4-0-32":{"p":"p3"},"4-0-33":{"p":"p3"},"4-0-34":{"p":"p3"},"4-0-35":{"p":"p3"},"4-0-36":{"p":"p3"},"4-0-37":{"p":"p3"},"4-0-38":{"p":"p3"},"4-0-39":{"p":"p3"},"4-0-40":{"p":"p3"},"4-0-41":{"p":"p3"},"4-0-42":{"p":"p3"},"4-0-43":{"p":"p3"},"4-1-0":{"p":"p1"},"4-1-1":{"p":"p1"},"4-1-2":{"p":"p1"},"4-1-3":{"p":"p1"},"4-1-4":{"p":"p1"},"4-1-5":{"p":"p1"},"4-1-6":{"p":"p1"},"4-1-7":{"p":"p1"},"4-1-8":{"p":"p1"},"4-1-9":{"p":"p1"},"4-1-10":{"p":"p1"},"4-1-11":{"p":"p1"},"4-1-12":{"p":"p1"},"4-1-13":{"p":"p1"},"4-1-14":{"p":"p1"},"4-1-15":{"p":"p1"},"4-1-16":{"p":"p1"},"4-1-17":{"p":"p1"},"4-1-18":{"p":"p1"},"4-1-19":{"p":"p1"},"4-1-20":{"p":"p1"},"4-1-21":{"p":"p1"},"4-1-22":{"p":"p1"},"4-1-23":{"p":"p1"},"4-1-24":{"p":"p1"},"4-1-25":{"p":"p1"},"4-1-26":{"p":"p1"},"4-1-27":{"p":"p1"},"4-1-28":{"p":"p1"},"4-1-29":{"p":"p1"},"4-2-0":{"p":"p2"},"4-2-1":{"p":"p2"},"4-2-2":{"p":"p2"},"4-2-3":{"p":"p2"},"4-2-4":{"p":"p2"},"4-2-5":{"p":"p2"},"4-2-6":{"p":"p2"},"4-2-7":{"p":"p2"},"4-2-8":{"p":"p2"},"4-2-9":{"p":"p2"},"4-2-10":{"p":"p2"},"4-2-11":{"p":"p2"},"4-2-12":{"p":"p2"},"4-2-13":{"p":"p2"},"4-2-14":{"p":"p2"},"4-2-15":{"p":"p2"},"4-2-16":{"p":"p2"},"4-2-17":{"p":"p2"},"4-2-18":{"p":"p2"},"4-2-19":{"p":"p2"},"4-2-20":{"p":"p2"},"4-2-21":{"p":"p2"},"4-2-22":{"p":"p2"},"4-2-23":{"p":"p2"},"4-2-24":{"p":"p2"},"4-2-25":{"p":"p2"},"4-2-26":{"p":"p2"},"4-2-27":{"p":"p2"},"4-4-2":{"p":"p5"},"4-4-3":{"p":"p5"},"4-4-4":{"p":"p5"},"4-4-5":{"p":"p5"},"4-4-6":{"p":"p5"},"4-4-7":{"p":"p5"},"4-4-8":{"p":"p5"},"4-4-9":{"p":"p5"},"4-4-10":{"p":"p5"},"4-4-11":{"p":"p5"},"4-4-12":{"p":"p5"},"4-4-13":{"p":"p5"},"4-4-14":{"p":"p5"},"4-4-15":{"p":"p5"},"4-4-30":{"p":"p5"},"4-4-31":{"p":"p5"},"4-4-32":{"p":"p5"},"4-4-33":{"p":"p5"},"4-4-34":{"p":"p5"},"4-4-35":{"p":"p5"},"4-4-36":{"p":"p5"},"4-4-37":{"p":"p5"},"4-4-38":{"p":"p5"},"4-4-39":{"p":"p5"},"4-4-40":{"p":"p5"},"4-4-41":{"p":"p5"},"4-4-42":{"p":"p5"},"4-4-43":{"p":"p5"},"4-4-44":{"p":"p5"},"4-4-45":{"p":"p5"},"5-0-18":{"x":1},"5-0-19":{"x":1},"5-0-20":{"x":1},"5-0-21":{"x":1},"5-0-22":{"x":1},"5-0-23":{"x":1},"5-0-24":{"x":1},"5-0-25":{"x":1},"5-0-26":{"x":1},"5-0-27":{"x":1},"5-0-28":{"x":1},"5-0-29":{"x":1},"5-0-30":{"x":1},"5-0-31":{"x":1},"5-0-32":{"x":1},"5-0-33":{"x":1},"5-0-34":{"x":1},"5-0-35":{"x":1},"5-0-36":{"x":1},"5-0-37":{"x":1},"5-0-38":{"x":1},"5-0-39":{"x":1},"5-0-40":{"x":1},"5-0-41":{"x":1},"5-0-42":{"x":1},"5-0-43":{"x":1},"5-0-44":{"x":1},"5-0-45":{"x":1},"5-1-0":{"p":"p1"},"5-1-1":{"p":"p1"},"5-1-2":{"p":"p1"},"5-1-3":{"p":"p1"},"5-1-4":{"p":"p1"},"5-1-5":{"p":"p1"},"5-1-6":{"p":"p1"},"5-1-7":{"p":"p1"},"5-1-8":{"p":"p1"},"5-1-9":{"p":"p1"},"5-1-10":{"p":"p1"},"5-1-11":{"p":"p1"},"5-1-12":{"p":"p1"},"5-1-13":{"p":"p1"},"5-1-14":{"p":"p1"},"5-1-15":{"p":"p1"},"5-1-16":{"p":"p1"},"5-1-17":{"p":"p1"},"5-1-18":{"x":1},"5-1-19":{"x":1},"5-1-20":{"x":1},"5-1-21":{"x":1},"5-1-22":{"x":1},"5-1-23":{"x":1},"5-1-24":{"x":1},"5-1-25":{"x":1},"5-1-26":{"x":1},"5-1-27":{"x":1},"5-1-28":{"x":1},"5-1-29":{"x":1},"5-1-30":{"x":1},"5-1-31":{"x":1},"5-1-32":{"x":1},"5-1-33":{"x":1},"5-1-34":{"x":1},"5-1-35":{"x":1},"5-1-36":{"x":1},"5-1-37":{"x":1},"5-1-38":{"x":1},"5-1-39":{"x":1},"5-1-40":{"x":1},"5-1-41":{"x":1},"5-1-42":{"x":1},"5-1-43":{"x":1},"5-1-44":{"x":1},"5-1-45":{"x":1},"5-2-18":{"x":1},"5-2-19":{"x":1},"5-2-20":{"x":1},"5-2-21":{"x":1},"5-2-22":{"x":1},"5-2-23":{"x":1},"5-2-24":{"x":1},"5-2-25":{"x":1},"5-2-26":{"x":1},"5-2-27":{"x":1},"5-2-28":{"x":1},"5-2-29":{"x":1},"5-2-30":{"x":1},"5-2-31":{"x":1},"5-2-32":{"x":1},"5-2-33":{"x":1},"5-2-34":{"x":1},"5-2-35":{"x":1},"5-2-36":{"x":1},"5-2-37":{"x":1},"5-2-38":{"x":1},"5-2-39":{"x":1},"5-2-40":{"x":1},"5-2-41":{"x":1},"5-2-42":{"x":1},"5-2-43":{"x":1},"5-2-44":{"x":1},"5-2-45":{"x":1},"5-3-18":{"x":1},"5-3-19":{"x":1},"5-3-20":{"x":1},"5-3-21":{"x":1},"5-3-22":{"x":1},"5-3-23":{"x":1},"5-3-24":{"x":1},"5-3-25":{"x":1},"5-3-26":{"x":1},"5-3-27":{"x":1},"5-3-28":{"x":1},"5-3-29":{"x":1},"5-3-30":{"x":1},"5-3-31":{"x":1},"5-3-32":{"x":1},"5-3-33":{"x":1},"5-3-34":{"x":1},"5-3-35":{"x":1},"5-3-36":{"x":1},"5-3-37":{"x":1},"5-3-38":{"x":1},"5-3-39":{"x":1},"5-3-40":{"x":1},"5-3-41":{"x":1},"5-3-42":{"x":1},"5-3-43":{"x":1},"5-3-44":{"x":1},"5-3-45":{"x":1},"5-4-18":{"x":1},"5-4-19":{"x":1},"5-4-20":{"x":1},"5-4-21":{"x":1},"5-4-22":{"x":1},"5-4-23":{"x":1},"5-4-24":{"x":1},"5-4-25":{"x":1},"5-4-26":{"x":1},"5-4-27":{"x":1},"5-4-28":{"x":1},"5-4-29":{"x":1},"5-4-30":{"x":1},"5-4-31":{"x":1},"5-4-32":{"x":1},"5-4-33":{"x":1},"5-4-34":{"x":1},"5-4-35":{"x":1},"5-4-36":{"x":1},"5-4-37":{"x":1},"5-4-38":{"x":1},"5-4-39":{"x":1},"5-4-40":{"x":1},"5-4-41":{"x":1},"5-4-42":{"x":1},"5-4-43":{"x":1},"5-4-44":{"x":1},"5-4-45":{"x":1}},"C":{"0-0-0":{"p":"p2"},"0-0-1":{"p":"p2"},"0-0-2":{"p":"p2"},"0-0-3":{"p":"p2"},"0-0-4":{"p":"p2"},"0-0-5":{"p":"p2"},"0-0-6":{"p":"p2"},"0-0-7":{"p":"p2"},"0-0-8":{"p":"p2"},"0-0-9":{"p":"p2"},"0-0-10":{"p":"p2"},"0-0-11":{"p":"p2"},"0-0-12":{"p":"p2"},"0-0-13":{"p":"p2"},"0-0-14":{"p":"p2"},"0-0-15":{"p":"p2"},"0-0-16":{"p":"p2"},"0-0-17":{"p":"p2"},"0-0-18":{"p":"p2"},"0-0-19":{"p":"p2"},"0-0-20":{"p":"p2"},"0-0-21":{"p":"p2"},"0-0-22":{"p":"p2"},"0-0-23":{"p":"p2"},"0-0-24":{"p":"p2"},"0-0-25":{"p":"p2"},"0-0-26":{"p":"p2"},"0-0-27":{"p":"p2"},"0-1-0":{"p":"p3"},"0-1-1":{"p":"p3"},"0-1-2":{"p":"p3"},"0-1-3":{"p":"p3"},"0-1-4":{"p":"p3"},"0-1-5":{"p":"p3"},"0-1-6":{"p":"p3"},"0-1-7":{"p":"p3"},"0-1-8":{"p":"p3"},"0-1-9":{"p":"p3"},"0-1-10":{"p":"p3"},"0-1-11":{"p":"p3"},"0-1-12":{"p":"p3"},"0-1-13":{"p":"p3"},"0-1-14":{"p":"p3"},"0-1-15":{"p":"p3"},"0-1-16":{"p":"p3"},"0-1-17":{"p":"p3"},"0-1-18":{"p":"p3"},"0-1-19":{"p":"p3"},"0-1-20":{"p":"p3"},"0-1-21":{"p":"p3","P":1},"0-1-22":{"p":"p3","P":1},"0-1-23":{"p":"p3"},"0-1-24":{"p":"p3"},"0-1-25":{"p":"p3"},"0-1-26":{"p":"p3"},"0-1-27":{"p":"p3"},"0-1-28":{"p":"p3"},"0-1-29":{"p":"p3"},"0-1-30":{"p":"p3"},"0-1-31":{"p":"p3"},"0-2-0":{"p":"p1"},"0-2-1":{"p":"p1"},"0-2-2":{"p":"p1"},"0-2-3":{"p":"p1"},"0-2-4":{"p":"p1"},"0-2-5":{"p":"p1"},"0-2-6":{"p":"p1"},"0-2-7":{"p":"p1"},"0-2-8":{"p":"p1"},"0-2-9":{"p":"p1"},"0-2-10":{"p":"p1"},"0-2-11":{"p":"p1"},"0-2-12":{"p":"p1"},"0-2-13":{"p":"p1"},"0-2-14":{"p":"p1"},"0-2-15":{"p":"p1"},"0-2-16":{"p":"p1"},"0-2-17":{"p":"p1"},"0-2-22":{"p":"p1"},"0-2-23":{"p":"p1"},"0-2-24":{"p":"p1"},"0-2-25":{"p":"p1"},"0-2-26":{"p":"p1"},"0-2-27":{"p":"p1"},"0-2-28":{"p":"p1"},"0-2-29":{"p":"p1"},"0-2-30":{"p":"p1"},"0-2-31":{"p":"p1"},"0-2-32":{"p":"p1"},"0-2-33":{"p":"p1"},"0-2-34":{"p":"p1"},"0-2-35":{"p":"p1"},"0-2-36":{"p":"p1"},"0-2-37":{"p":"p1"},"0-2-38":{"p":"p1"},"0-2-39":{"p":"p1"},"0-2-40":{"p":"p1"},"0-2-41":{"p":"p1"},"0-2-42":{"p":"p1"},"0-2-43":{"p":"p1"},"0-4-0":{"p":"p5"},"0-4-1":{"p":"p5"},"0-4-2":{"p":"p5"},"0-4-3":{"p":"p5"},"0-4-4":{"p":"p5"},"0-4-5":{"p":"p5"},"0-4-6":{"p":"p5"},"0-4-7":{"p":"p5"},"0-4-8":{"p":"p5"},"0-4-9":{"p":"p5"},"0-4-10":{"p":"p5"},"0-4-11":{"p":"p5"},"0-4-12":{"p":"p5"},"0-4-13":{"p":"p5"},"0-4-14":{"p":"p5"},"0-4-15":{"p":"p5"},"0-4-16":{"p":"p5"},"0-4-17":{"p":"p5"},"0-4-18":{"p":"p5"},"0-4-19":{"p":"p5"},"0-4-28":{"p":"p5"},"0-4-29":{"p":"p5"},"0-4-30":{"p":"p5"},"0-4-31":{"p":"p5"},"0-4-32":{"p":"p5"},"0-4-33":{"p":"p5"},"0-4-34":{"p":"p5"},"0-4-35":{"p":"p5"},"0-4-36":{"p":"p5"},"0-4-37":{"p":"p5"},"0-4-38":{"p":"p5"},"0-4-39":{"p":"p5"},"0-4-40":{"p":"p5"},"0-4-41":{"p":"p5"},"0-4-42":{"p":"p5"},"0-4-43":{"p":"p5"},"0-4-44":{"p":"p5"},"0-4-45":{"p":"p5"},"1-0-0":{"p":"p2"},"1-0-1":{"p":"p2"},"1-0-2":{"p":"p2"},"1-0-3":{"p":"p2"},"1-0-4":{"p":"p2"},"1-0-5":{"p":"p2"},"1-0-6":{"p":"p2"},"1-0-7":{"p":"p2"},"1-0-8":{"p":"p2"},"1-0-9":{"p":"p2"},"1-0-10":{"p":"p2"},"1-0-11":{"p":"p2"},"1-0-12":{"p":"p2"},"1-0-13":{"p":"p2"},"1-0-14":{"p":"p2"},"1-0-15":{"p":"p2"},"1-0-16":{"p":"p2"},"1-0-17":{"p":"p2"},"1-0-18":{"p":"p2"},"1-0-19":{"p":"p2"},"1-0-20":{"p":"p2"},"1-0-21":{"p":"p2"},"1-0-22":{"p":"p2"},"1-0-23":{"p":"p2"},"1-0-24":{"p":"p2"},"1-0-25":{"p":"p2"},"1-0-26":{"p":"p2"},"1-0-27":{"p":"p2"},"1-1-0":{"p":"p3"},"1-1-1":{"p":"p3"},"1-1-2":{"p":"p3"},"1-1-3":{"p":"p3"},"1-1-4":{"p":"p3"},"1-1-5":{"p":"p3"},"1-1-6":{"p":"p3"},"1-1-7":{"p":"p3"},"1-1-8":{"p":"p3"},"1-1-9":{"p":"p3"},"1-1-10":{"p":"p3"},"1-1-11":{"p":"p3"},"1-1-12":{"p":"p3"},"1-1-13":{"p":"p3"},"1-1-14":{"p":"p3"},"1-1-15":{"p":"p3"},"1-1-16":{"p":"p3"},"1-1-17":{"p":"p3"},"1-1-18":{"p":"p3"},"1-1-19":{"p":"p3"},"1-1-20":{"p":"p3"},"1-1-21":{"p":"p3"},"1-2-18":{"p":"p1"},"1-2-19":{"p":"p1"},"1-2-20":{"p":"p1"},"1-2-21":{"p":"p1"},"1-2-22":{"p":"p1"},"1-2-23":{"p":"p1"},"1-2-24":{"p":"p1"},"1-2-25":{"p":"p1"},"1-2-26":{"p":"p1"},"1-2-27":{"p":"p1"},"1-2-28":{"p":"p1"},"1-2-29":{"p":"p1"},"1-2-30":{"p":"p1"},"1-2-31":{"p":"p1"},"1-2-32":{"p":"p1"},"1-2-33":{"p":"p1"},"1-2-34":{"p":"p1"},"1-2-35":{"p":"p1"},"1-2-36":{"p":"p1"},"1-2-37":{"p":"p1"},"1-2-38":{"p":"p1"},"1-2-39":{"p":"p1"},"1-2-40":{"p":"p1"},"1-2-41":{"p":"p1"},"1-2-42":{"p":"p1"},"1-2-43":{"p":"p1"},"1-2-44":{"p":"p1"},"1-2-45":{"p":"p1"},"1-3-0":{"p":"p4"},"1-3-1":{"p":"p4"},"1-3-2":{"p":"p4"},"1-3-3":{"p":"p4"},"1-3-4":{"p":"p4"},"1-3-5":{"p":"p4"},"1-3-6":{"p":"p4"},"1-3-7":{"p":"p4"},"1-3-8":{"p":"p4"},"1-3-9":{"p":"p4"},"1-3-10":{"p":"p4"},"1-3-11":{"p":"p4"},"1-3-12":{"p":"p4"},"1-3-13":{"p":"p4"},"1-3-14":{"p":"p4"},"1-3-15":{"p":"p4"},"1-3-16":{"p":"p4"},"1-3-17":{"p":"p4"},"1-3-18":{"p":"p4"},"1-3-19":{"p":"p4"},"1-3-20":{"p":"p4"},"1-3-21":{"p":"p4"},"1-3-22":{"p":"p4"},"1-3-23":{"p":"p4"},"1-3-24":{"p":"p4"},"1-3-25":{"p":"p4"},"1-3-26":{"p":"p4"},"1-3-27":{"p":"p4"},"1-3-28":{"p":"p4"},"1-3-29":{"p":"p4"},"1-3-30":{"p":"p4"},"1-3-31":{"p":"p4"},"1-4-28":{"p":"p5"},"1-4-29":{"p":"p5"},"1-4-30":{"p":"p5"},"1-4-31":{"p":"p5"},"1-4-32":{"p":"p5"},"1-4-33":{"p":"p5"},"1-4-34":{"p":"p5"},"1-4-35":{"p":"p5"},"1-4-36":{"p":"p5"},"1-4-37":{"p":"p5"},"1-4-38":{"p":"p5"},"1-4-39":{"p":"p5"},"1-4-40":{"p":"p5"},"1-4-41":{"p":"p5"},"2-0-0":{"p":"p2"},"2-0-1":{"p":"p2"},"2-0-2":{"p":"p2"},"2-0-3":{"p":"p2"},"2-0-4":{"p":"p2"},"2-0-5":{"p":"p2"},"2-0-6":{"p":"p2"},"2-0-7":{"p":"p2"},"2-0-8":{"p":"p2"},"2-0-9":{"p":"p2"},"2-0-10":{"p":"p2"},"2-0-11":{"p":"p2"},"2-0-12":{"p":"p2"},"2-0-13":{"p":"p2"},"2-0-14":{"p":"p2"},"2-0-15":{"p":"p2"},"2-0-16":{"p":"p2"},"2-0-17":{"p":"p2"},"2-0-18":{"p":"p2"},"2-0-19":{"p":"p2"},"2-0-20":{"p":"p2"},"2-0-21":{"p":"p2"},"2-0-22":{"p":"p2"},"2-0-23":{"p":"p2"},"2-0-24":{"p":"p2"},"2-0-25":{"p":"p2"},"2-0-26":{"p":"p2"},"2-0-27":{"p":"p2"},"2-2-0":{"p":"p1"},"2-2-1":{"p":"p1"},"2-2-2":{"p":"p1"},"2-2-3":{"p":"p1"},"2-2-4":{"p":"p1"},"2-2-5":{"p":"p1"},"2-2-6":{"p":"p1"},"2-2-7":{"p":"p1"},"2-2-8":{"p":"p1"},"2-2-9":{"p":"p1"},"2-2-10":{"p":"p1"},"2-2-11":{"p":"p1"},"2-2-12":{"p":"p1"},"2-2-13":{"p":"p1"},"2-2-14":{"p":"p1"},"2-2-15":{"p":"p1"},"2-2-16":{"p":"p1"},"2-2-17":{"p":"p1"},"2-2-18":{"p":"p1"},"2-2-19":{"p":"p1"},"2-2-20":{"p":"p1"},"2-2-21":{"p":"p1"},"2-2-22":{"p":"p1"},"2-2-23":{"p":"p1"},"2-2-24":{"p":"p1"},"2-2-25":{"p":"p1"},"2-2-26":{"p":"p1"},"2-2-27":{"p":"p1"},"2-2-28":{"p":"p1"},"2-2-29":{"p":"p1"},"2-2-30":{"p":"p1"},"2-2-31":{"p":"p1"},"2-3-18":{"p":"p4"},"2-3-19":{"p":"p4"},"2-3-20":{"p":"p4"},"2-3-21":{"p":"p4"},"2-3-22":{"p":"p4"},"2-3-23":{"p":"p4"},"2-3-24":{"p":"p4"},"2-3-25":{"p":"p4"},"2-3-26":{"p":"p4"},"2-3-27":{"p":"p4"},"2-3-28":{"p":"p4"},"2-3-29":{"p":"p4"},"2-3-30":{"p":"p4"},"2-3-31":{"p":"p4"},"2-3-32":{"p":"p4"},"2-3-33":{"p":"p4"},"2-3-34":{"p":"p4"},"2-3-35":{"p":"p4"},"2-3-36":{"p":"p4"},"2-3-37":{"p":"p4"},"2-3-38":{"p":"p4"},"2-3-39":{"p":"p4"},"2-3-40":{"p":"p4"},"2-3-41":{"p":"p4"},"2-3-42":{"p":"p4"},"2-3-43":{"p":"p4"},"2-3-44":{"p":"p4"},"2-3-45":{"p":"p4"},"2-4-4":{"p":"p5"},"2-4-5":{"p":"p5"},"2-4-6":{"p":"p5"},"2-4-7":{"p":"p5"},"2-4-8":{"p":"p5"},"2-4-9":{"p":"p5"},"2-4-10":{"p":"p5"},"2-4-11":{"p":"p5"},"2-4-12":{"p":"p5"},"2-4-13":{"p":"p5"},"2-4-14":{"p":"p5"},"2-4-15":{"p":"p5"},"2-4-16":{"p":"p5"},"2-4-17":{"p":"p5"},"2-4-28":{"p":"p5"},"2-4-29":{"p":"p5"},"2-4-30":{"p":"p5"},"2-4-31":{"p":"p5"},"2-4-32":{"p":"p5"},"2-4-33":{"p":"p5"},"2-4-34":{"p":"p5"},"2-4-35":{"p":"p5"},"2-4-36":{"p":"p5"},"2-4-37":{"p":"p5"},"2-4-38":{"p":"p5"},"2-4-39":{"p":"p5"},"2-4-40":{"p":"p5"},"2-4-41":{"p":"p5"},"3-0-0":{"p":"p2"},"3-0-1":{"p":"p2"},"3-0-2":{"p":"p2"},"3-0-3":{"p":"p2"},"3-0-4":{"p":"p2"},"3-0-5":{"p":"p2"},"3-0-6":{"p":"p2"},"3-0-7":{"p":"p2"},"3-0-8":{"p":"p2"},"3-0-9":{"p":"p2"},"3-0-10":{"p":"p2"},"3-0-11":{"p":"p2"},"3-0-12":{"p":"p2"},"3-0-13":{"p":"p2"},"3-0-14":{"p":"p2"},"3-0-15":{"p":"p2"},"3-0-16":{"p":"p2"},"3-0-17":{"p":"p2"},"3-0-18":{"p":"p2"},"3-0-19":{"p":"p2"},"3-0-20":{"p":"p2"},"3-0-21":{"p":"p2"},"3-0-22":{"p":"p2"},"3-0-23":{"p":"p2"},"3-0-24":{"p":"p2"},"3-0-25":{"p":"p2"},"3-0-26":{"p":"p2"},"3-0-27":{"p":"p2"},"3-1-0":{"p":"p3"},"3-1-1":{"p":"p3"},"3-1-2":{"p":"p3"},"3-1-3":{"p":"p3"},"3-1-4":{"p":"p3"},"3-1-5":{"p":"p3"},"3-1-6":{"p":"p3"},"3-1-7":{"p":"p3"},"3-1-8":{"p":"p3"},"3-1-9":{"p":"p3"},"3-1-10":{"p":"p3"},"3-1-11":{"p":"p3"},"3-1-12":{"p":"p3"},"3-1-13":{"p":"p3"},"3-1-14":{"p":"p3"},"3-1-15":{"p":"p3"},"3-1-16":{"p":"p3"},"3-1-17":{"p":"p3"},"3-1-22":{"p":"p3"},"3-1-23":{"p":"p3"},"3-1-24":{"p":"p3"},"3-1-25":{"p":"p3"},"3-1-26":{"p":"p3"},"3-1-27":{"p":"p3"},"3-1-28":{"p":"p3"},"3-1-29":{"p":"p3"},"3-1-30":{"p":"p3"},"3-1-31":{"p":"p3"},"3-1-32":{"p":"p3"},"3-1-33":{"p":"p3"},"3-1-34":{"p":"p3"},"3-1-35":{"p":"p3"},"3-1-36":{"p":"p3"},"3-1-37":{"p":"p3"},"3-1-38":{"p":"p3"},"3-1-39":{"p":"p3"},"3-1-40":{"p":"p3"},"3-1-41":{"p":"p3"},"3-3-2":{"p":"p4"},"3-3-3":{"p":"p4"},"3-3-4":{"p":"p4"},"3-3-5":{"p":"p4"},"3-3-6":{"p":"p4"},"3-3-7":{"p":"p4"},"3-3-8":{"p":"p4"},"3-3-9":{"p":"p4"},"3-3-10":{"p":"p4"},"3-3-11":{"p":"p4"},"3-3-12":{"p":"p4"},"3-3-13":{"p":"p4"},"3-3-14":{"p":"p4"},"3-3-15":{"p":"p4"},"3-3-16":{"p":"p4"},"3-3-17":{"p":"p4"},"3-3-18":{"p":"p4"},"3-3-19":{"p":"p4"},"3-3-20":{"p":"p4"},"3-3-21":{"p":"p4"},"3-3-26":{"p":"p4"},"3-3-27":{"p":"p4"},"3-3-28":{"p":"p4"},"3-3-29":{"p":"p4"},"3-3-30":{"p":"p4"},"3-3-31":{"p":"p4"},"3-3-32":{"p":"p4"},"3-3-33":{"p":"p4"},"3-3-34":{"p":"p4"},"3-3-35":{"p":"p4"},"3-3-36":{"p":"p4"},"3-3-37":{"p":"p4"},"3-3-38":{"p":"p4"},"3-3-39":{"p":"p4"},"3-3-40":{"p":"p4"},"3-3-41":{"p":"p4"},"3-3-42":{"p":"p4"},"3-3-43":{"p":"p4"},"3-3-44":{"p":"p4"},"3-3-45":{"p":"p4"},"3-4-2":{"p":"p5"},"3-4-3":{"p":"p5"},"3-4-4":{"p":"p5"},"3-4-5":{"p":"p5"},"3-4-6":{"p":"p5"},"3-4-7":{"p":"p5"},"3-4-8":{"p":"p5"},"3-4-9":{"p":"p5"},"3-4-10":{"p":"p5"},"3-4-11":{"p":"p5"},"3-4-12":{"p":"p5"},"3-4-13":{"p":"p5"},"3-4-14":{"p":"p5"},"3-4-15":{"p":"p5"},"3-4-16":{"p":"p5"},"3-4-17":{"p":"p5"},"4-0-0":{"p":"p2"},"4-0-1":{"p":"p2"},"4-0-2":{"p":"p2"},"4-0-3":{"p":"p2"},"4-0-4":{"p":"p2"},"4-0-5":{"p":"p2"},"4-0-6":{"p":"p2"},"4-0-7":{"p":"p2"},"4-0-8":{"p":"p2"},"4-0-9":{"p":"p2"},"4-0-10":{"p":"p2"},"4-0-11":{"p":"p2"},"4-0-12":{"p":"p2"},"4-0-13":{"p":"p2"},"4-0-14":{"p":"p2"},"4-0-15":{"p":"p2"},"4-0-16":{"p":"p2"},"4-0-17":{"p":"p2"},"4-0-18":{"p":"p2"},"4-0-19":{"p":"p2"},"4-0-20":{"p":"p2"},"4-0-21":{"p":"p2"},"4-0-22":{"p":"p2"},"4-0-23":{"p":"p2"},"4-0-24":{"p":"p2"},"4-0-25":{"p":"p2"},"4-0-26":{"p":"p2"},"4-0-27":{"p":"p2"},"4-1-0":{"p":"p3"},"4-1-1":{"p":"p3"},"4-1-2":{"p":"p3"},"4-1-3":{"p":"p3"},"4-1-4":{"p":"p3"},"4-1-5":{"p":"p3"},"4-1-6":{"p":"p3"},"4-1-7":{"p":"p3"},"4-1-8":{"p":"p3"},"4-1-9":{"p":"p3"},"4-1-10":{"p":"p3"},"4-1-11":{"p":"p3"},"4-1-12":{"p":"p3"},"4-1-13":{"p":"p3"},"4-1-14":{"p":"p3"},"4-1-15":{"p":"p3"},"4-1-16":{"p":"p3"},"4-1-17":{"p":"p3"},"4-1-18":{"p":"p3"},"4-1-19":{"p":"p3"},"4-1-20":{"p":"p3"},"4-1-21":{"p":"p3","P":1},"4-1-22":{"p":"p3","P":1},"4-1-23":{"p":"p3"},"4-1-24":{"p":"p3"},"4-1-25":{"p":"p3"},"4-1-26":{"p":"p3"},"4-1-27":{"p":"p3"},"4-1-28":{"p":"p3"},"4-1-29":{"p":"p3"},"4-2-2":{"p":"p1"},"4-2-3":{"p":"p1"},"4-2-4":{"p":"p1"},"4-2-5":{"p":"p1"},"4-2-6":{"p":"p1"},"4-2-7":{"p":"p1"},"4-2-8":{"p":"p1"},"4-2-9":{"p":"p1"},"4-2-10":{"p":"p1"},"4-2-11":{"p":"p1"},"4-2-12":{"p":"p1"},"4-2-13":{"p":"p1"},"4-2-14":{"p":"p1"},"4-2-15":{"p":"p1"},"4-2-16":{"p":"p1"},"4-2-17":{"p":"p1"},"4-2-18":{"p":"p1"},"4-2-19":{"p":"p1"},"4-2-20":{"p":"p1"},"4-2-21":{"p":"p1"},"4-2-26":{"p":"p1"},"4-2-27":{"p":"p1"},"4-2-28":{"p":"p1"},"4-2-29":{"p":"p1"},"4-2-30":{"p":"p1"},"4-2-31":{"p":"p1"},"4-2-32":{"p":"p1"},"4-2-33":{"p":"p1"},"4-2-34":{"p":"p1"},"4-2-35":{"p":"p1"},"4-2-36":{"p":"p1"},"4-2-37":{"p":"p1"},"4-2-38":{"p":"p1"},"4-2-39":{"p":"p1"},"4-2-40":{"p":"p1"},"4-2-41":{"p":"p1"},"4-2-42":{"p":"p1"},"4-2-43":{"p":"p1"},"4-2-44":{"p":"p1"},"4-2-45":{"p":"p1"},"4-3-0":{"p":"p4"},"4-3-1":{"p":"p4"},"4-3-2":{"p":"p4"},"4-3-3":{"p":"p4"},"4-3-4":{"p":"p4"},"4-3-5":{"p":"p4"},"4-3-6":{"p":"p4"},"4-3-7":{"p":"p4"},"4-3-8":{"p":"p4"},"4-3-9":{"p":"p4"},"4-3-10":{"p":"p4"},"4-3-11":{"p":"p4"},"4-3-12":{"p":"p4"},"4-3-13":{"p":"p4"},"4-3-14":{"p":"p4"},"4-3-15":{"p":"p4"},"4-3-16":{"p":"p4"},"4-3-17":{"p":"p4"},"4-3-22":{"p":"p4"},"4-3-23":{"p":"p4"},"4-3-24":{"p":"p4"},"4-3-25":{"p":"p4"},"4-3-26":{"p":"p4"},"4-3-27":{"p":"p4"},"4-3-28":{"p":"p4"},"4-3-29":{"p":"p4"},"4-3-30":{"p":"p4"},"4-3-31":{"p":"p4"},"4-3-32":{"p":"p4"},"4-3-33":{"p":"p4"},"4-3-34":{"p":"p4"},"4-3-35":{"p":"p4"},"4-3-36":{"p":"p4"},"4-3-37":{"p":"p4"},"4-3-38":{"p":"p4"},"4-3-39":{"p":"p4"},"4-3-40":{"p":"p4"},"4-3-41":{"p":"p4"},"4-3-42":{"p":"p4"},"4-3-43":{"p":"p4"},"5-0-18":{"x":1},"5-0-19":{"x":1},"5-0-20":{"x":1},"5-0-21":{"x":1},"5-0-22":{"x":1},"5-0-23":{"x":1},"5-0-24":{"x":1},"5-0-25":{"x":1},"5-0-26":{"x":1},"5-0-27":{"x":1},"5-0-28":{"x":1},"5-0-29":{"x":1},"5-0-30":{"x":1},"5-0-31":{"x":1},"5-0-32":{"x":1},"5-0-33":{"x":1},"5-0-34":{"x":1},"5-0-35":{"x":1},"5-0-36":{"x":1},"5-0-37":{"x":1},"5-0-38":{"x":1},"5-0-39":{"x":1},"5-0-40":{"x":1},"5-0-41":{"x":1},"5-0-42":{"x":1},"5-0-43":{"x":1},"5-0-44":{"x":1},"5-0-45":{"x":1},"5-1-0":{"p":"p3"},"5-1-1":{"p":"p3"},"5-1-2":{"p":"p3"},"5-1-3":{"p":"p3"},"5-1-4":{"p":"p3"},"5-1-5":{"p":"p3"},"5-1-6":{"p":"p3"},"5-1-7":{"p":"p3"},"5-1-8":{"p":"p3"},"5-1-9":{"p":"p3"},"5-1-10":{"p":"p3"},"5-1-11":{"p":"p3"},"5-1-12":{"p":"p3"},"5-1-13":{"p":"p3"},"5-1-14":{"p":"p3"},"5-1-15":{"p":"p3"},"5-1-16":{"p":"p3"},"5-1-17":{"p":"p3"},"5-1-18":{"x":1},"5-1-19":{"x":1},"5-1-20":{"x":1},"5-1-21":{"x":1},"5-1-22":{"x":1},"5-1-23":{"x":1},"5-1-24":{"x":1},"5-1-25":{"x":1},"5-1-26":{"x":1},"5-1-27":{"x":1},"5-1-28":{"x":1},"5-1-29":{"x":1},"5-1-30":{"x":1},"5-1-31":{"x":1},"5-1-32":{"x":1},"5-1-33":{"x":1},"5-1-34":{"x":1},"5-1-35":{"x":1},"5-1-36":{"x":1},"5-1-37":{"x":1},"5-1-38":{"x":1},"5-1-39":{"x":1},"5-1-40":{"x":1},"5-1-41":{"x":1},"5-1-42":{"x":1},"5-1-43":{"x":1},"5-1-44":{"x":1},"5-1-45":{"x":1},"5-2-18":{"x":1},"5-2-19":{"x":1},"5-2-20":{"x":1},"5-2-21":{"x":1},"5-2-22":{"x":1},"5-2-23":{"x":1},"5-2-24":{"x":1},"5-2-25":{"x":1},"5-2-26":{"x":1},"5-2-27":{"x":1},"5-2-28":{"x":1},"5-2-29":{"x":1},"5-2-30":{"x":1},"5-2-31":{"x":1},"5-2-32":{"x":1},"5-2-33":{"x":1},"5-2-34":{"x":1},"5-2-35":{"x":1},"5-2-36":{"x":1},"5-2-37":{"x":1},"5-2-38":{"x":1},"5-2-39":{"x":1},"5-2-40":{"x":1},"5-2-41":{"x":1},"5-2-42":{"x":1},"5-2-43":{"x":1},"5-2-44":{"x":1},"5-2-45":{"x":1},"5-3-18":{"x":1},"5-3-19":{"x":1},"5-3-20":{"x":1},"5-3-21":{"x":1},"5-3-22":{"x":1},"5-3-23":{"x":1},"5-3-24":{"x":1},"5-3-25":{"x":1},"5-3-26":{"x":1},"5-3-27":{"x":1},"5-3-28":{"x":1},"5-3-29":{"x":1},"5-3-30":{"x":1},"5-3-31":{"x":1},"5-3-32":{"x":1},"5-3-33":{"x":1},"5-3-34":{"x":1},"5-3-35":{"x":1},"5-3-36":{"x":1},"5-3-37":{"x":1},"5-3-38":{"x":1},"5-3-39":{"x":1},"5-3-40":{"x":1},"5-3-41":{"x":1},"5-3-42":{"x":1},"5-3-43":{"x":1},"5-3-44":{"x":1},"5-3-45":{"x":1},"5-4-18":{"x":1},"5-4-19":{"x":1},"5-4-20":{"x":1},"5-4-21":{"x":1},"5-4-22":{"x":1},"5-4-23":{"x":1},"5-4-24":{"x":1},"5-4-25":{"x":1},"5-4-26":{"x":1},"5-4-27":{"x":1},"5-4-28":{"x":1},"5-4-29":{"x":1},"5-4-30":{"x":1},"5-4-31":{"x":1},"5-4-32":{"x":1},"5-4-33":{"x":1},"5-4-34":{"x":1},"5-4-35":{"x":1},"5-4-36":{"x":1},"5-4-37":{"x":1},"5-4-38":{"x":1},"5-4-39":{"x":1},"5-4-40":{"x":1},"5-4-41":{"x":1},"5-4-42":{"x":1},"5-4-43":{"x":1},"5-4-44":{"x":1},"5-4-45":{"x":1}},"D":{"0-0-0":{"p":"p1"},"0-0-1":{"p":"p1"},"0-0-2":{"p":"p1"},"0-0-3":{"p":"p1"},"0-0-4":{"p":"p1"},"0-0-5":{"p":"p1"},"0-0-6":{"p":"p1"},"0-0-7":{"p":"p1"},"0-0-8":{"p":"p1"},"0-0-9":{"p":"p1"},"0-0-10":{"p":"p1"},"0-0-11":{"p":"p1"},"0-0-12":{"p":"p1"},"0-0-13":{"p":"p1"},"0-0-14":{"p":"p1"},"0-0-15":{"p":"p1"},"0-0-16":{"p":"p1"},"0-0-17":{"p":"p1"},"0-0-18":{"p":"p1"},"0-0-19":{"p":"p1"},"0-0-20":{"p":"p1"},"0-0-21":{"p":"p1"},"0-0-28":{"p":"p1"},"0-0-29":{"p":"p1"},"0-0-30":{"p":"p1"},"0-0-31":{"p":"p1"},"0-0-32":{"p":"p1"},"0-0-33":{"p":"p1"},"0-0-34":{"p":"p1"},"0-0-35":{"p":"p1"},"0-0-36":{"p":"p1"},"0-0-37":{"p":"p1"},"0-0-38":{"p":"p1"},"0-0-39":{"p":"p1"},"0-0-40":{"p":"p1"},"0-0-41":{"p":"p1"},"0-0-42":{"p":"p1"},"0-0-43":{"p":"p1"},"0-0-44":{"p":"p1"},"0-0-45":{"p":"p1"},"0-1-0":{"p":"p2"},"0-1-1":{"p":"p2"},"0-1-2":{"p":"p2"},"0-1-3":{"p":"p2"},"0-1-4":{"p":"p2"},"0-1-5":{"p":"p2"},"0-1-6":{"p":"p2"},"0-1-7":{"p":"p2"},"0-1-8":{"p":"p2"},"0-1-9":{"p":"p2"},"0-1-10":{"p":"p2"},"0-1-11":{"p":"p2"},"0-1-12":{"p":"p2"},"0-1-13":{"p":"p2"},"0-1-14":{"p":"p2"},"0-1-15":{"p":"p2"},"0-1-16":{"p":"p2"},"0-1-17":{"p":"p2"},"0-1-18":{"p":"p2"},"0-1-19":{"p":"p2"},"0-1-20":{"p":"p2"},"0-1-21":{"p":"p2"},"0-1-22":{"p":"p2"},"0-1-23":{"p":"p2"},"0-1-24":{"p":"p2"},"0-1-25":{"p":"p2"},"0-1-26":{"p":"p2"},"0-1-27":{"p":"p2"},"0-2-0":{"p":"p3"},"0-2-1":{"p":"p3"},"0-2-2":{"p":"p3"},"0-2-3":{"p":"p3"},"0-2-4":{"p":"p3"},"0-2-5":{"p":"p3"},"0-2-6":{"p":"p3"},"0-2-7":{"p":"p3"},"0-2-8":{"p":"p3"},"0-2-9":{"p":"p3"},"0-2-10":{"p":"p3"},"0-2-11":{"p":"p3"},"0-2-12":{"p":"p3"},"0-2-13":{"p":"p3"},"0-2-14":{"p":"p3"},"0-2-15":{"p":"p3"},"0-2-16":{"p":"p3"},"0-2-17":{"p":"p3"},"0-2-22":{"p":"p3"},"0-2-23":{"p":"p3"},"0-2-24":{"p":"p3"},"0-2-25":{"p":"p3"},"0-2-26":{"p":"p3"},"0-2-27":{"p":"p3"},"0-2-28":{"p":"p3"},"0-2-29":{"p":"p3"},"0-2-30":{"p":"p3"},"0-2-31":{"p":"p3"},"0-2-32":{"p":"p3"},"0-2-33":{"p":"p3"},"0-2-34":{"p":"p3"},"0-2-35":{"p":"p3"},"0-2-36":{"p":"p3"},"0-2-37":{"p":"p3"},"0-2-38":{"p":"p3"},"0-2-39":{"p":"p3"},"0-2-40":{"p":"p3"},"0-2-41":{"p":"p3"},"0-2-42":{"p":"p3"},"0-2-43":{"p":"p3"},"0-3-0":{"p":"p4"},"0-3-1":{"p":"p4"},"0-3-2":{"p":"p4"},"0-3-3":{"p":"p4"},"0-3-4":{"p":"p4"},"0-3-5":{"p":"p4"},"0-3-6":{"p":"p4"},"0-3-7":{"p":"p4"},"0-3-8":{"p":"p4"},"0-3-9":{"p":"p4"},"0-3-10":{"p":"p4"},"0-3-11":{"p":"p4"},"0-3-12":{"p":"p4"},"0-3-13":{"p":"p4"},"0-3-14":{"p":"p4"},"0-3-15":{"p":"p4"},"0-3-16":{"p":"p4"},"0-3-17":{"p":"p4"},"0-3-18":{"p":"p4"},"0-3-19":{"p":"p4"},"0-3-20":{"p":"p4"},"0-3-21":{"p":"p4"},"0-3-22":{"p":"p4"},"0-3-23":{"p":"p4"},"0-3-24":{"p":"p4"},"0-3-25":{"p":"p4"},"0-3-26":{"p":"p4"},"0-3-27":{"p":"p4"},"0-3-28":{"p":"p4"},"0-3-29":{"p":"p4"},"0-3-30":{"p":"p4"},"0-3-31":{"p":"p4"},"1-0-2":{"p":"p1"},"1-0-3":{"p":"p1"},"1-0-4":{"p":"p1"},"1-0-5":{"p":"p1"},"1-0-6":{"p":"p1"},"1-0-7":{"p":"p1"},"1-0-8":{"p":"p1"},"1-0-9":{"p":"p1"},"1-0-10":{"p":"p1"},"1-0-11":{"p":"p1"},"1-0-12":{"p":"p1"},"1-0-13":{"p":"p1"},"1-0-14":{"p":"p1"},"1-0-15":{"p":"p1"},"1-0-16":{"p":"p1"},"1-0-17":{"p":"p1"},"1-0-22":{"p":"p1"},"1-0-23":{"p":"p1"},"1-0-24":{"p":"p1"},"1-0-25":{"p":"p1"},"1-0-26":{"p":"p1"},"1-0-27":{"p":"p1"},"1-0-28":{"p":"p1"},"1-0-29":{"p":"p1"},"1-0-30":{"p":"p1"},"1-0-31":{"p":"p1"},"1-0-32":{"p":"p1"},"1-0-33":{"p":"p1"},"1-0-34":{"p":"p1"},"1-0-35":{"p":"p1"},"1-0-36":{"p":"p1"},"1-0-37":{"p":"p1"},"1-0-38":{"p":"p1"},"1-0-39":{"p":"p1"},"1-0-40":{"p":"p1"},"1-0-41":{"p":"p1"},"1-1-0":{"p":"p2"},"1-1-1":{"p":"p2"},"1-1-2":{"p":"p2"},"1-1-3":{"p":"p2"},"1-1-4":{"p":"p2"},"1-1-5":{"p":"p2"},"1-1-6":{"p":"p2"},"1-1-7":{"p":"p2"},"1-1-8":{"p":"p2"},"1-1-9":{"p":"p2"},"1-1-10":{"p":"p2"},"1-1-11":{"p":"p2"},"1-1-12":{"p":"p2"},"1-1-13":{"p":"p2"},"1-1-14":{"p":"p2"},"1-1-15":{"p":"p2"},"1-1-16":{"p":"p2"},"1-1-17":{"p":"p2"},"1-1-18":{"p":"p2"},"1-1-19":{"p":"p2"},"1-1-20":{"p":"p2"},"1-1-21":{"p":"p2"},"1-1-22":{"p":"p2"},"1-1-23":{"p":"p2"},"1-1-24":{"p":"p2"},"1-1-25":{"p":"p2"},"1-1-26":{"p":"p2"},"1-1-27":{"p":"p2"},"1-2-18":{"p":"p3"},"1-2-19":{"p":"p3"},"1-2-20":{"p":"p3"},"1-2-21":{"p":"p3"},"1-2-22":{"p":"p3","P":1},"1-2-23":{"p":"p3","P":1},"1-2-24":{"p":"p3"},"1-2-25":{"p":"p3"},"1-2-26":{"p":"p3"},"1-2-27":{"p":"p3"},"1-2-28":{"p":"p3"},"1-2-29":{"p":"p3"},"1-2-30":{"p":"p3"},"1-2-31":{"p":"p3"},"1-2-32":{"p":"p3"},"1-2-33":{"p":"p3"},"1-2-34":{"p":"p3"},"1-2-35":{"p":"p3"},"1-2-36":{"p":"p3"},"1-2-37":{"p":"p3"},"1-2-38":{"p":"p3"},"1-2-39":{"p":"p3"},"1-2-40":{"p":"p3"},"1-2-41":{"p":"p3"},"1-2-42":{"p":"p3"},"1-2-43":{"p":"p3"},"1-2-44":{"p":"p3"},"1-2-45":{"p":"p3"},"1-3-0":{"p":"p4"},"1-3-1":{"p":"p4"},"1-3-2":{"p":"p4"},"1-3-3":{"p":"p4"},"1-3-4":{"p":"p4"},"1-3-5":{"p":"p4"},"1-3-6":{"p":"p4"},"1-3-7":{"p":"p4"},"1-3-8":{"p":"p4"},"1-3-9":{"p":"p4"},"1-3-10":{"p":"p4"},"1-3-11":{"p":"p4"},"1-3-12":{"p":"p4"},"1-3-13":{"p":"p4"},"1-3-14":{"p":"p4"},"1-3-15":{"p":"p4"},"1-3-16":{"p":"p4"},"1-3-17":{"p":"p4"},"1-3-18":{"p":"p4"},"1-3-19":{"p":"p4"},"1-3-20":{"p":"p4"},"1-3-21":{"p":"p4"},"1-4-0":{"p":"p5"},"1-4-1":{"p":"p5"},"1-4-2":{"p":"p5"},"1-4-3":{"p":"p5"},"1-4-4":{"p":"p5"},"1-4-5":{"p":"p5"},"1-4-6":{"p":"p5"},"1-4-7":{"p":"p5"},"1-4-8":{"p":"p5"},"1-4-9":{"p":"p5"},"1-4-10":{"p":"p5"},"1-4-11":{"p":"p5"},"1-4-12":{"p":"p5"},"1-4-13":{"p":"p5"},"1-4-14":{"p":"p5"},"1-4-15":{"p":"p5"},"1-4-16":{"p":"p5"},"1-4-17":{"p":"p5"},"2-0-0":{"p":"p1"},"2-0-1":{"p":"p1"},"2-0-2":{"p":"p1"},"2-0-3":{"p":"p1"},"2-0-4":{"p":"p1"},"2-0-5":{"p":"p1"},"2-0-6":{"p":"p1"},"2-0-7":{"p":"p1"},"2-0-8":{"p":"p1"},"2-0-9":{"p":"p1"},"2-0-10":{"p":"p1"},"2-0-11":{"p":"p1"},"2-0-12":{"p":"p1"},"2-0-13":{"p":"p1"},"2-0-14":{"p":"p1"},"2-0-15":{"p":"p1"},"2-0-16":{"p":"p1"},"2-0-17":{"p":"p1"},"2-0-22":{"p":"p1"},"2-0-23":{"p":"p1"},"2-0-24":{"p":"p1"},"2-0-25":{"p":"p1"},"2-0-26":{"p":"p1"},"2-0-27":{"p":"p1"},"2-0-28":{"p":"p1"},"2-0-29":{"p":"p1"},"2-0-30":{"p":"p1"},"2-0-31":{"p":"p1"},"2-0-32":{"p":"p1"},"2-0-33":{"p":"p1"},"2-0-34":{"p":"p1"},"2-0-35":{"p":"p1"},"2-0-36":{"p":"p1"},"2-0-37":{"p":"p1"},"2-0-38":{"p":"p1"},"2-0-39":{"p":"p1"},"2-0-40":{"p":"p1"},"2-0-41":{"p":"p1"},"2-1-0":{"p":"p2"},"2-1-1":{"p":"p2"},"2-1-2":{"p":"p2"},"2-1-3":{"p":"p2"},"2-1-4":{"p":"p2"},"2-1-5":{"p":"p2"},"2-1-6":{"p":"p2"},"2-1-7":{"p":"p2"},"2-1-8":{"p":"p2"},"2-1-9":{"p":"p2"},"2-1-10":{"p":"p2"},"2-1-11":{"p":"p2"},"2-1-12":{"p":"p2"},"2-1-13":{"p":"p2"},"2-1-14":{"p":"p2"},"2-1-15":{"p":"p2"},"2-1-16":{"p":"p2"},"2-1-17":{"p":"p2"},"2-1-18":{"p":"p2"},"2-1-19":{"p":"p2"},"2-1-20":{"p":"p2"},"2-1-21":{"p":"p2"},"2-1-22":{"p":"p2"},"2-1-23":{"p":"p2"},"2-1-24":{"p":"p2"},"2-1-25":{"p":"p2"},"2-1-26":{"p":"p2"},"2-1-27":{"p":"p2"},"2-2-0":{"p":"p3"},"2-2-1":{"p":"p3"},"2-2-2":{"p":"p3"},"2-2-3":{"p":"p3"},"2-2-4":{"p":"p3"},"2-2-5":{"p":"p3"},"2-2-6":{"p":"p3"},"2-2-7":{"p":"p3"},"2-2-8":{"p":"p3"},"2-2-9":{"p":"p3"},"2-2-10":{"p":"p3"},"2-2-11":{"p":"p3"},"2-2-12":{"p":"p3"},"2-2-13":{"p":"p3"},"2-2-14":{"p":"p3"},"2-2-15":{"p":"p3"},"2-2-16":{"p":"p3"},"2-2-17":{"p":"p3"},"2-2-18":{"p":"p3"},"2-2-19":{"p":"p3"},"2-2-20":{"p":"p3"},"2-2-21":{"p":"p3"},"2-2-22":{"p":"p3","P":1},"2-2-23":{"p":"p3","P":1},"2-2-24":{"p":"p3"},"2-2-25":{"p":"p3"},"2-2-26":{"p":"p3"},"2-2-27":{"p":"p3"},"2-2-28":{"p":"p3"},"2-2-29":{"p":"p3"},"2-2-30":{"p":"p3"},"2-2-31":{"p":"p3"},"2-4-32":{"p":"p5"},"2-4-33":{"p":"p5"},"2-4-34":{"p":"p5"},"2-4-35":{"p":"p5"},"2-4-36":{"p":"p5"},"2-4-37":{"p":"p5"},"2-4-38":{"p":"p5"},"2-4-39":{"p":"p5"},"2-4-40":{"p":"p5"},"2-4-41":{"p":"p5"},"2-4-42":{"p":"p5"},"2-4-43":{"p":"p5"},"2-4-44":{"p":"p5"},"2-4-45":{"p":"p5"},"3-0-0":{"p":"p1"},"3-0-1":{"p":"p1"},"3-0-2":{"p":"p1"},"3-0-3":{"p":"p1"},"3-0-4":{"p":"p1"},"3-0-5":{"p":"p1"},"3-0-6":{"p":"p1"},"3-0-7":{"p":"p1"},"3-0-8":{"p":"p1"},"3-0-9":{"p":"p1"},"3-0-10":{"p":"p1"},"3-0-11":{"p":"p1"},"3-0-12":{"p":"p1"},"3-0-13":{"p":"p1"},"3-0-14":{"p":"p1"},"3-0-15":{"p":"p1"},"3-0-16":{"p":"p1"},"3-0-17":{"p":"p1"},"3-0-18":{"p":"p1"},"3-0-19":{"p":"p1"},"3-0-20":{"p":"p1"},"3-0-21":{"p":"p1"},"3-0-22":{"p":"p1"},"3-0-23":{"p":"p1"},"3-0-24":{"p":"p1"},"3-0-25":{"p":"p1"},"3-1-0":{"p":"p2"},"3-1-1":{"p":"p2"},"3-1-2":{"p":"p2"},"3-1-3":{"p":"p2"},"3-1-4":{"p":"p2"},"3-1-5":{"p":"p2"},"3-1-6":{"p":"p2"},"3-1-7":{"p":"p2"},"3-1-8":{"p":"p2"},"3-1-9":{"p":"p2"},"3-1-10":{"p":"p2"},"3-1-11":{"p":"p2"},"3-1-12":{"p":"p2"},"3-1-13":{"p":"p2"},"3-1-14":{"p":"p2"},"3-1-15":{"p":"p2"},"3-1-16":{"p":"p2"},"3-1-17":{"p":"p2"},"3-1-18":{"p":"p2"},"3-1-19":{"p":"p2"},"3-1-20":{"p":"p2"},"3-1-21":{"p":"p2"},"3-1-22":{"p":"p2"},"3-1-23":{"p":"p2"},"3-1-24":{"p":"p2"},"3-1-25":{"p":"p2"},"3-1-26":{"p":"p2"},"3-1-27":{"p":"p2"},"3-3-0":{"p":"p4"},"3-3-1":{"p":"p4"},"3-3-2":{"p":"p4"},"3-3-3":{"p":"p4"},"3-3-4":{"p":"p4"},"3-3-5":{"p":"p4"},"3-3-6":{"p":"p4"},"3-3-7":{"p":"p4"},"3-3-8":{"p":"p4"},"3-3-9":{"p":"p4"},"3-3-10":{"p":"p4"},"3-3-11":{"p":"p4"},"3-3-12":{"p":"p4"},"3-3-13":{"p":"p4"},"3-3-14":{"p":"p4"},"3-3-15":{"p":"p4"},"3-3-16":{"p":"p4"},"3-3-17":{"p":"p4"},"3-3-22":{"p":"p4"},"3-3-23":{"p":"p4"},"3-3-24":{"p":"p4"},"3-3-25":{"p":"p4"},"3-3-26":{"p":"p4"},"3-3-27":{"p":"p4"},"3-3-28":{"p":"p4"},"3-3-29":{"p":"p4"},"3-3-30":{"p":"p4"},"3-3-31":{"p":"p4"},"3-3-32":{"p":"p4"},"3-3-33":{"p":"p4"},"3-3-34":{"p":"p4"},"3-3-35":{"p":"p4"},"3-3-36":{"p":"p4"},"3-3-37":{"p":"p4"},"3-3-38":{"p":"p4"},"3-3-39":{"p":"p4"},"3-3-40":{"p":"p4"},"3-3-41":{"p":"p4"},"3-4-2":{"p":"p5"},"3-4-3":{"p":"p5"},"3-4-4":{"p":"p5"},"3-4-5":{"p":"p5"},"3-4-6":{"p":"p5"},"3-4-7":{"p":"p5"},"3-4-8":{"p":"p5"},"3-4-9":{"p":"p5"},"3-4-10":{"p":"p5"},"3-4-11":{"p":"p5"},"3-4-12":{"p":"p5"},"3-4-13":{"p":"p5"},"3-4-14":{"p":"p5"},"3-4-15":{"p":"p5"},"3-4-28":{"p":"p5"},"3-4-29":{"p":"p5"},"3-4-30":{"p":"p5"},"3-4-31":{"p":"p5"},"3-4-32":{"p":"p5"},"3-4-33":{"p":"p5"},"3-4-34":{"p":"p5"},"3-4-35":{"p":"p5"},"3-4-36":{"p":"p5"},"3-4-37":{"p":"p5"},"3-4-38":{"p":"p5"},"3-4-39":{"p":"p5"},"3-4-40":{"p":"p5"},"3-4-41":{"p":"p5"},"3-4-42":{"p":"p5"},"3-4-43":{"p":"p5"},"3-4-44":{"p":"p5"},"3-4-45":{"p":"p5"},"4-1-0":{"p":"p2"},"4-1-1":{"p":"p2"},"4-1-2":{"p":"p2"},"4-1-3":{"p":"p2"},"4-1-4":{"p":"p2"},"4-1-5":{"p":"p2"},"4-1-6":{"p":"p2"},"4-1-7":{"p":"p2"},"4-1-8":{"p":"p2"},"4-1-9":{"p":"p2"},"4-1-10":{"p":"p2"},"4-1-11":{"p":"p2"},"4-1-12":{"p":"p2"},"4-1-13":{"p":"p2"},"4-1-14":{"p":"p2"},"4-1-15":{"p":"p2"},"4-1-16":{"p":"p2"},"4-1-17":{"p":"p2"},"4-1-18":{"p":"p2"},"4-1-19":{"p":"p2"},"4-1-20":{"p":"p2"},"4-1-21":{"p":"p2"},"4-1-22":{"p":"p2"},"4-1-23":{"p":"p2"},"4-1-24":{"p":"p2"},"4-1-25":{"p":"p2"},"4-1-26":{"p":"p2"},"4-1-27":{"p":"p2"},"4-2-2":{"p":"p3"},"4-2-3":{"p":"p3"},"4-2-4":{"p":"p3"},"4-2-5":{"p":"p3"},"4-2-6":{"p":"p3"},"4-2-7":{"p":"p3"},"4-2-8":{"p":"p3"},"4-2-9":{"p":"p3"},"4-2-10":{"p":"p3"},"4-2-11":{"p":"p3"},"4-2-12":{"p":"p3"},"4-2-13":{"p":"p3"},"4-2-14":{"p":"p3"},"4-2-15":{"p":"p3"},"4-2-16":{"p":"p3"},"4-2-17":{"p":"p3"},"4-2-18":{"p":"p3"},"4-2-19":{"p":"p3"},"4-2-20":{"p":"p3"},"4-2-21":{"p":"p3"},"4-2-26":{"p":"p3"},"4-2-27":{"p":"p3"},"4-2-28":{"p":"p3"},"4-2-29":{"p":"p3"},"4-2-30":{"p":"p3"},"4-2-31":{"p":"p3"},"4-2-32":{"p":"p3"},"4-2-33":{"p":"p3"},"4-2-34":{"p":"p3"},"4-2-35":{"p":"p3"},"4-2-36":{"p":"p3"},"4-2-37":{"p":"p3"},"4-2-38":{"p":"p3"},"4-2-39":{"p":"p3"},"4-2-40":{"p":"p3"},"4-2-41":{"p":"p3"},"4-2-42":{"p":"p3"},"4-2-43":{"p":"p3"},"4-2-44":{"p":"p3"},"4-2-45":{"p":"p3"},"4-3-0":{"p":"p4"},"4-3-1":{"p":"p4"},"4-3-2":{"p":"p4"},"4-3-3":{"p":"p4"},"4-3-4":{"p":"p4"},"4-3-5":{"p":"p4"},"4-3-6":{"p":"p4"},"4-3-7":{"p":"p4"},"4-3-8":{"p":"p4"},"4-3-9":{"p":"p4"},"4-3-10":{"p":"p4"},"4-3-11":{"p":"p4"},"4-3-12":{"p":"p4"},"4-3-13":{"p":"p4"},"4-3-14":{"p":"p4"},"4-3-15":{"p":"p4"},"4-3-16":{"p":"p4"},"4-3-17":{"p":"p4"},"4-3-18":{"p":"p4"},"4-3-19":{"p":"p4"},"4-3-20":{"p":"p4"},"4-3-21":{"p":"p4"},"4-3-22":{"p":"p4"},"4-3-23":{"p":"p4"},"4-3-24":{"p":"p4"},"4-3-25":{"p":"p4"},"4-3-26":{"p":"p4"},"4-3-27":{"p":"p4"},"4-3-28":{"p":"p4"},"4-3-29":{"p":"p4"},"4-4-0":{"p":"p5"},"4-4-1":{"p":"p5"},"4-4-2":{"p":"p5"},"4-4-3":{"p":"p5"},"4-4-4":{"p":"p5"},"4-4-5":{"p":"p5"},"4-4-6":{"p":"p5"},"4-4-7":{"p":"p5"},"4-4-8":{"p":"p5"},"4-4-9":{"p":"p5"},"4-4-10":{"p":"p5"},"4-4-11":{"p":"p5"},"4-4-12":{"p":"p5"},"4-4-13":{"p":"p5"},"4-4-14":{"p":"p5"},"4-4-15":{"p":"p5"},"4-4-16":{"p":"p5"},"4-4-17":{"p":"p5"},"4-4-28":{"p":"p5"},"4-4-29":{"p":"p5"},"4-4-30":{"p":"p5"},"4-4-31":{"p":"p5"},"4-4-32":{"p":"p5"},"4-4-33":{"p":"p5"},"4-4-34":{"p":"p5"},"4-4-35":{"p":"p5"},"4-4-36":{"p":"p5"},"4-4-37":{"p":"p5"},"4-4-38":{"p":"p5"},"4-4-39":{"p":"p5"},"4-4-40":{"p":"p5"},"4-4-41":{"p":"p5"},"5-0-18":{"x":1},"5-0-19":{"x":1},"5-0-20":{"x":1},"5-0-21":{"x":1},"5-0-22":{"x":1},"5-0-23":{"x":1},"5-0-24":{"x":1},"5-0-25":{"x":1},"5-0-26":{"x":1},"5-0-27":{"x":1},"5-0-28":{"x":1},"5-0-29":{"x":1},"5-0-30":{"x":1},"5-0-31":{"x":1},"5-0-32":{"x":1},"5-0-33":{"x":1},"5-0-34":{"x":1},"5-0-35":{"x":1},"5-0-36":{"x":1},"5-0-37":{"x":1},"5-0-38":{"x":1},"5-0-39":{"x":1},"5-0-40":{"x":1},"5-0-41":{"x":1},"5-0-42":{"x":1},"5-0-43":{"x":1},"5-0-44":{"x":1},"5-0-45":{"x":1},"5-1-18":{"x":1},"5-1-19":{"x":1},"5-1-20":{"x":1},"5-1-21":{"x":1},"5-1-22":{"x":1},"5-1-23":{"x":1},"5-1-24":{"x":1},"5-1-25":{"x":1},"5-1-26":{"x":1},"5-1-27":{"x":1},"5-1-28":{"x":1},"5-1-29":{"x":1},"5-1-30":{"x":1},"5-1-31":{"x":1},"5-1-32":{"x":1},"5-1-33":{"x":1},"5-1-34":{"x":1},"5-1-35":{"x":1},"5-1-36":{"x":1},"5-1-37":{"x":1},"5-1-38":{"x":1},"5-1-39":{"x":1},"5-1-40":{"x":1},"5-1-41":{"x":1},"5-1-42":{"x":1},"5-1-43":{"x":1},"5-1-44":{"x":1},"5-1-45":{"x":1},"5-2-18":{"x":1},"5-2-19":{"x":1},"5-2-20":{"x":1},"5-2-21":{"x":1},"5-2-22":{"x":1},"5-2-23":{"x":1},"5-2-24":{"x":1},"5-2-25":{"x":1},"5-2-26":{"x":1},"5-2-27":{"x":1},"5-2-28":{"x":1},"5-2-29":{"x":1},"5-2-30":{"x":1},"5-2-31":{"x":1},"5-2-32":{"x":1},"5-2-33":{"x":1},"5-2-34":{"x":1},"5-2-35":{"x":1},"5-2-36":{"x":1},"5-2-37":{"x":1},"5-2-38":{"x":1},"5-2-39":{"x":1},"5-2-40":{"x":1},"5-2-41":{"x":1},"5-2-42":{"x":1},"5-2-43":{"x":1},"5-2-44":{"x":1},"5-2-45":{"x":1},"5-3-0":{"p":"p4"},"5-3-1":{"p":"p4"},"5-3-2":{"p":"p4"},"5-3-3":{"p":"p4"},"5-3-4":{"p":"p4"},"5-3-5":{"p":"p4"},"5-3-6":{"p":"p4"},"5-3-7":{"p":"p4"},"5-3-8":{"p":"p4"},"5-3-9":{"p":"p4"},"5-3-10":{"p":"p4"},"5-3-11":{"p":"p4"},"5-3-12":{"p":"p4"},"5-3-13":{"p":"p4"},"5-3-14":{"p":"p4"},"5-3-15":{"p":"p4"},"5-3-16":{"p":"p4"},"5-3-17":{"p":"p4"},"5-3-18":{"x":1},"5-3-19":{"x":1},"5-3-20":{"x":1},"5-3-21":{"x":1},"5-3-22":{"x":1},"5-3-23":{"x":1},"5-3-24":{"x":1},"5-3-25":{"x":1},"5-3-26":{"x":1},"5-3-27":{"x":1},"5-3-28":{"x":1},"5-3-29":{"x":1},"5-3-30":{"x":1},"5-3-31":{"x":1},"5-3-32":{"x":1},"5-3-33":{"x":1},"5-3-34":{"x":1},"5-3-35":{"x":1},"5-3-36":{"x":1},"5-3-37":{"x":1},"5-3-38":{"x":1},"5-3-39":{"x":1},"5-3-40":{"x":1},"5-3-41":{"x":1},"5-3-42":{"x":1},"5-3-43":{"x":1},"5-3-44":{"x":1},"5-3-45":{"x":1},"5-4-18":{"x":1},"5-4-19":{"x":1},"5-4-20":{"x":1},"5-4-21":{"x":1},"5-4-22":{"x":1},"5-4-23":{"x":1},"5-4-24":{"x":1},"5-4-25":{"x":1},"5-4-26":{"x":1},"5-4-27":{"x":1},"5-4-28":{"x":1},"5-4-29":{"x":1},"5-4-30":{"x":1},"5-4-31":{"x":1},"5-4-32":{"x":1},"5-4-33":{"x":1},"5-4-34":{"x":1},"5-4-35":{"x":1},"5-4-36":{"x":1},"5-4-37":{"x":1},"5-4-38":{"x":1},"5-4-39":{"x":1},"5-4-40":{"x":1},"5-4-41":{"x":1},"5-4-42":{"x":1},"5-4-43":{"x":1},"5-4-44":{"x":1},"5-4-45":{"x":1}}},"closedDays":{"A":{},"B":{},"C":{},"D":{}},"anchor":{"date":"2026-10-26","letter":"A"}}/*FIN*/;
+const READONLY = /*RO*/true/*RO*/;
+const ONLINE_EMBED = /*ONLINE*/{"url":"https://ablzafgwijwxwqgntqly.supabase.co","key":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFibHphZmd3aWp3eHdxZ250cWx5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMwMTIyNDIsImV4cCI6MjEwODU4ODI0Mn0.cGM0zxGKkEdw8Y4TfKWg2h3h6rYkj_utvAEu4NWKNTo"}/*FINONLINE*/;
+const KEY = "planning-abcd";
+const DAYS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+const WEEKS = ["A", "B", "C", "D"];
+const NSLOT = 46, NCOL = 5;
+const TIMES = Array.from({ length: NSLOT + 1 }, (_, i) => { const m = 7 * 60 + 30 + 15 * i; return String(Math.floor(m / 60)).padStart(2, "0") + "h" + String(m % 60).padStart(2, "0"); });
+const clone = o => JSON.parse(JSON.stringify(o));
+const hash = s => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return String(h); };
+const SIG = hash(JSON.stringify(ORIGINAL));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function normalize(d) {
+  d.labels = d.labels || []; d.closedDays = d.closedDays || {}; d.weeks = d.weeks || {};
+  for (const w of WEEKS) { d.weeks[w] = d.weeks[w] || {}; d.closedDays[w] = d.closedDays[w] || {}; }
+  d.anchor = d.anchor || { date: "2026-10-26", letter: "A" }; d.v = 2; return d;
+}
+let DATA = normalize(clone(ORIGINAL));
+if (!READONLY) try {
+  const s = JSON.parse(localStorage.getItem(KEY) || "null");
+  // accepte les changements faits avec cette version du fichier, ou avec la version précédente (sans libellés)
+  if (s && s.data && (s.sig === SIG || !s.data.v)) DATA = normalize(s.data);
+  // fichier mis à jour (nouvelles semaines de base) : on garde les prénoms, couleurs et libellés déjà saisis
+  else if (s && s.data && s.data.people) { DATA.people = s.data.people; if (s.data.labels) DATA.labels = s.data.labels; }
+} catch (e) {}
+let editing = false, tool = null, week = "D", ref = new Date();
+const selection = new Set();
+
+function persist() {
+  if (READONLY) return;
+  try {
+    if (JSON.stringify(DATA) === JSON.stringify(normalize(clone(ORIGINAL)))) localStorage.removeItem(KEY);
+    else localStorage.setItem(KEY, JSON.stringify({ sig: SIG, data: DATA }));
+  } catch (e) {}
+  schedulePublish();
+}
+// ---------- Synchronisation en ligne (Supabase) ----------
+const ROW = "principal", SB_SRC = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js";
+function normUrl(u) {
+  u = (u || "").trim();
+  if (!u) return "";
+  if (!/^https?:\/\//i.test(u)) u = "https://" + u;
+  try {
+    const x = new URL(u);
+    const m = x.pathname.match(/\/project\/([a-z0-9]{15,})/i);
+    if (/(^|\.)supabase\.com$/i.test(x.hostname) && m) return "https://" + m[1].toLowerCase() + ".supabase.co";
+    return "https://" + x.hostname.toLowerCase();
+  } catch (e) { return u; }
+}
+let ONLINE = ONLINE_EMBED;
+if (!READONLY) try { const o = JSON.parse(localStorage.getItem("planning-online") || "null"); if (o && o.url) ONLINE = { url: normUrl(o.url), key: o.key }; } catch (e) {}
+let sb = null, session = null, pubTimer = null;
+const hhmm = d => d.toLocaleTimeString("fr-BE", { hour: "2-digit", minute: "2-digit" });
+function loadSb() {
+  return new Promise((res, rej) => {
+    if (window.supabase) return res();
+    const s = document.createElement("script"); s.src = SB_SRC; s.onload = () => res();
+    s.onerror = () => rej(new Error("Impossible de joindre Supabase (connexion Internet ?)")); document.head.append(s);
+  });
+}
+async function client() {
+  if (!ONLINE.url || !ONLINE.key) return null;
+  await loadSb();
+  if (!sb) sb = window.supabase.createClient(ONLINE.url, ONLINE.key, { auth: { persistSession: !READONLY, storageKey: "planning-auth" } });
+  return sb;
+}
+const payload = () => ({ v: 2, people: DATA.people, labels: DATA.labels, weeks: DATA.weeks, closedDays: DATA.closedDays, anchor: DATA.anchor });
+function setStatus(msg, kind) { const s = document.getElementById("olStatus"); if (!s) return; s.textContent = msg; s.className = "olstatus" + (kind ? " " + kind : ""); }
+async function publishNow() {
+  if (!session || !sb) return;
+  setStatus("Publication…", "wait");
+  const { error } = await sb.from("planning").upsert({ id: ROW, data: payload(), updated_at: new Date().toISOString() });
+  if (error) { setStatus("Erreur de publication : " + error.message, "err"); return; }
+  setStatus("Connecté · publié à " + hhmm(new Date()) + " · la page employés est à jour", "ok");
+}
+function schedulePublish() {
+  if (READONLY || !session) return;
+  clearTimeout(pubTimer); setStatus("Modifications en attente de publication…", "wait");
+  pubTimer = setTimeout(publishNow, 1500);
+}
+function showLogged(on) {
+  const g = id => document.getElementById(id);
+  if (!g("olLogin")) return;
+  g("olLogin").hidden = on; g("olLoginBox").hidden = on; g("olConfig").hidden = on;
+  g("olLogout").hidden = !on; g("olPublish").hidden = !on;
+}
+async function afterLogin() {
+  showLogged(true);
+  const { data, error } = await sb.from("planning").select("data, updated_at").eq("id", ROW).maybeSingle();
+  if (error) { setStatus("Connecté, mais lecture impossible : " + error.message, "err"); return; }
+  if (!data) { await publishNow(); return; }
+  if (JSON.stringify(data.data) === JSON.stringify(payload())) { setStatus("Connecté · tout est à jour (dernière publication " + new Date(data.updated_at).toLocaleString("fr-BE") + ")", "ok"); return; }
+  document.getElementById("olChoice").hidden = false;
+  setStatus("Connecté · choisissez quelle version garder", "wait");
+  document.getElementById("olChoice").dataset.online = JSON.stringify(data.data);
+}
+async function initOwnerOnline() {
+  const g = id => document.getElementById(id);
+  g("olUrl").value = ONLINE.url; g("olKey").value = ONLINE.key;
+  g("olLogin").addEventListener("click", async () => {
+    const url = normUrl(g("olUrl").value), key = g("olKey").value.trim().replace(/\s+/g, "");
+    g("olUrl").value = url;
+    if (!/^https:\/\/.+/.test(url) || key.length < 20) { setStatus("Renseignez l'adresse du projet et la clé publique.", "err"); return; }
+    if (url !== ONLINE.url || key !== ONLINE.key) { ONLINE = { url, key }; sb = null; try { localStorage.setItem("planning-online", JSON.stringify(ONLINE)); } catch (e) {} }
+    try {
+      setStatus("Connexion…", "wait"); await client();
+      const { data, error } = await sb.auth.signInWithPassword({ email: g("olEmail").value.trim(), password: g("olPass").value });
+      if (error) { setStatus("Connexion refusée : " + error.message, "err"); return; }
+      session = data.session; g("olPass").value = ""; await afterLogin();
+    } catch (e) { setStatus(e.message, "err"); }
+  });
+  g("olLogout").addEventListener("click", async () => { if (sb) await sb.auth.signOut(); session = null; showLogged(false); setStatus("Déconnecté : les changements restent sur cet ordinateur."); });
+  g("olPublish").addEventListener("click", publishNow);
+  g("olTakeOnline").addEventListener("click", () => {
+    DATA = normalize(JSON.parse(g("olChoice").dataset.online)); g("olChoice").hidden = true;
+    persist(); renderAll(); setStatus("Connecté · version en ligne chargée", "ok");
+  });
+  g("olPushLocal").addEventListener("click", async () => { g("olChoice").hidden = true; await publishNow(); });
+  if (ONLINE.url && ONLINE.key) {
+    try {
+      await client(); const { data } = await sb.auth.getSession();
+      if (data.session) { session = data.session; await afterLogin(); }
+    } catch (e) { setStatus(e.message, "err"); }
+  }
+}
+// Page employés : lit le planning en ligne et se met à jour en direct
+async function initReaderOnline() {
+  const badge = document.querySelector(".ro-badge");
+  if (!ONLINE.url || !ONLINE.key) return;
+  const sub = document.querySelector(".sub");
+  const show = (d, live) => { if (sub) sub.textContent = (live ? "Mis à jour en direct" : "Hors connexion, dernière version connue") + (d ? " · dernière modification le " + new Date(d).toLocaleString("fr-BE", { dateStyle: "short", timeStyle: "short" }) : ""); if (badge) { badge.textContent = live ? "● En direct" : "Hors connexion"; badge.className = "ro-badge live" + (live ? "" : " off"); } };
+  const fetchRow = async () => {
+    try {
+      const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("délai dépassé")), 8000));
+      const { data, error } = await Promise.race([sb.from("planning").select("data, updated_at").eq("id", ROW).maybeSingle(), timeout]);
+      if (error) throw error;
+      if (data) { DATA = normalize(data.data); renderAll(); show(data.updated_at, true); } else show(null, true);
+    } catch (e) { show(null, false); }
+  };
+  try { await client(); } catch (e) { show(null, false); return; }
+  await fetchRow();
+  sb.channel("planning-live").on("postgres_changes", { event: "*", schema: "public", table: "planning", filter: "id=eq." + ROW },
+    p => { if (p.new && p.new.data) { DATA = normalize(p.new.data); renderAll(); show(p.new.updated_at, true); } }).subscribe();
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) fetchRow(); });
+}
+
+function toast(m) { const t = document.createElement("div"); t.className = "toast"; t.textContent = m; document.body.append(t); setTimeout(() => t.remove(), 2400); }
+const person = id => DATA.people.find(p => p.id === id);
+const lab = id => DATA.labels.find(l => l.id === id);
+const nameOf = p => p.name.trim() || "À nommer";
+function textOn(hex) { const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (r * 299 + g * 587 + b * 114) / 1000 > 140 ? "#18202b" : "#fff"; }
+const hm = n => { const m = n * 15; return Math.floor(m / 60) + "h" + String(m % 60).padStart(2, "0"); };
+
+// Lettre de semaine selon le lundi : 1-7 → A, 8-14 → B, 15-21 → C, 22 et plus → D
+function monday(d) { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return x; }
+// Rotation continue A → B → C → D → A…, calée sur une semaine de référence (réglable dans Modifier)
+function letterOf(d) {
+  const [y, mo, da] = DATA.anchor.date.split("-").map(Number);
+  const diff = Math.round((monday(d) - monday(new Date(y, mo - 1, da))) / 6048e5);
+  return WEEKS[(((WEEKS.indexOf(DATA.anchor.letter) + diff) % 4) + 4) % 4];
+}
+const fmt = d => d.toLocaleDateString("fr-BE", { day: "numeric", month: "long" });
+
+
+function renderTabs() {
+  document.getElementById("tabs").innerHTML = WEEKS.map(w => '<button class="tab" role="tab" type="button" data-w="' + w + '" aria-selected="' + (w === week) + '">' + w + (w === letterOf(new Date()) ? '<span class="now">auj.</span>' : '') + '</button>').join("");
+  const m = monday(ref), s = new Date(m); s.setDate(m.getDate() + 5);
+  document.getElementById("dateLabel").innerHTML = 'Semaine du <b>' + fmt(m) + '</b> au ' + fmt(s) + ' → <b>semaine ' + letterOf(ref) + '</b>';
+  document.getElementById("titleWeek").textContent = "· semaine " + week;
+  const ew = document.getElementById("editWeek"); if (ew) ew.textContent = week;
+  document.getElementById("ruleText").textContent = "Roulement sur 4 semaines A → B → C → D · cette semaine = semaine " + letterOf(new Date());
+  const ad = document.getElementById("anchorDate"); if (ad) { ad.value = DATA.anchor.date; document.getElementById("anchorLetter").value = DATA.anchor.letter; }
+}
+// Les heures fermées (case ou journée) restent comptées
+function totals() {
+  const work = {}, byLab = {}, perPersonLab = {};
+  for (const c of Object.values(DATA.weeks[week])) {
+    if (c.l) {
+      byLab[c.l] = (byLab[c.l] || 0) + 1;
+      if (c.p) { const k = c.p; perPersonLab[k] = perPersonLab[k] || {}; perPersonLab[k][c.l] = (perPersonLab[k][c.l] || 0) + 1; }
+    } else if (c.p) work[c.p] = (work[c.p] || 0) + 1;
+  }
+  return { work, byLab, perPersonLab };
+}
+// Prise et fin de poste : créneaux travaillés (sans libellé), regroupés en plages continues
+function shifts(id, d) { return shiftsIn(week, id, d); }
+function shiftsIn(wk, id, d) {
+  const W = DATA.weeks[wk], on = new Array(NSLOT).fill(false);
+  for (let j = 0; j < NCOL; j++) for (let i = 0; i < NSLOT; i++) { const c = W[d + "-" + j + "-" + i]; if (c && c.p === id && !c.l) on[i] = true; }
+  const out = []; let s = -1;
+  for (let i = 0; i <= NSLOT; i++) {
+    if (i < NSLOT && on[i]) { if (s < 0) s = i; }
+    else if (s >= 0) { out.push([TIMES[s], TIMES[i]]); s = -1; }
+  }
+  return out;
+}
+// 07h30 → 7h30, 15h00 → 15h
+const short = s => s.replace(/^0/, "").replace(/h00$/, "h");
+function renderLegend() {
+  const t = totals();
+  const cur = week, today = letterOf(new Date());
+  const fmtSeg = sg => sg.map(([a, b]) => '<span style="white-space:nowrap">' + short(a).toUpperCase() + "-" + short(b).toUpperCase() + "</span>").join("/<wbr>");
+  let h = '<div class="side-head"><b>Récap par personne</b><span>semaine affichée : ' + cur + ' · aujourd\'hui : ' + today + '</span></div>';
+  for (const p of DATA.people) {
+    h += '<div class="pcard"><div class="ph" style="background:' + p.color + ';color:' + textOn(p.color) + '">' + esc(nameOf(p)) + '</div><table><thead><tr><th>Jour/Sem</th>';
+    WEEKS.forEach(w => h += '<th class="' + (w === cur ? "cur" : "") + '">Semaine ' + w + (w === today && w !== cur ? ' <small style="font-weight:600">(auj.)</small>' : '') + '</th>');
+    h += '</tr></thead><tbody>';
+    DAYS.forEach((d, di) => {
+      h += '<tr><th>' + d + '</th>';
+      WEEKS.forEach(w => {
+        const sg = shiftsIn(w, p.id, di), labs = new Set();
+        for (let j = 0; j < NCOL; j++) for (let i = 0; i < NSLOT; i++) { const c = DATA.weeks[w][di + "-" + j + "-" + i]; if (c && c.p === p.id && c.l && lab(c.l)) labs.add(c.l); }
+        const tags = [...labs].map(l => '<span class="labtag" style="background:' + lab(l).color + ';color:' + textOn(lab(l).color) + '">' + esc(lab(l).name || "Libellé") + '</span>').join(" ");
+        const val = sg.length ? fmtSeg(sg) : "";
+        h += '<td class="' + (w === cur ? "cur " : "") + (val ? "" : "off") + '">' + (val || (tags ? "" : "OFF")) + (tags ? (val ? "<br>" : "") + tags : "") + '</td>';
+      });
+      h += '</tr>';
+    });
+    h += '<tr class="tot"><th>Total</th>' + WEEKS.map(w => '<td class="' + (w === cur ? "cur" : "") + '">' + hm(workIn(w, p.id)) + '</td>').join("") + '</tr>';
+    h += '</tbody></table></div>';
+  }
+  document.getElementById("recap").innerHTML = h;
+  document.getElementById("legend").innerHTML = DATA.labels.length ? DATA.labels.map(l => '<span class="chip"><i class="sq" style="background:' + l.color + '"></i><span>' + esc(l.name || "Libellé") + '</span><small>' + hm(t.byLab[l.id] || 0) + ' (sem. ' + week + ')</small></span>').join("") : "";
+}
+function workIn(w, id) { let n = 0; for (const c of Object.values(DATA.weeks[w])) if (c.p === id && !c.l) n++; return n; }
+function itemRow(o, kind) {
+  return '<div class="person" data-kind="' + kind + '" data-id="' + o.id + '">' + (kind === "label" ? '<input type="text" value="' + esc(o.name) + '" placeholder="Ex. : Congé" aria-label="Libellé"><span class="arrow">›</span><input type="color" value="' + o.color + '" aria-label="Couleur">' : '<input type="color" value="' + o.color + '" aria-label="Couleur"><input type="text" value="' + esc(o.name) + '" placeholder="Prénom" aria-label="Prénom">') + '<button type="button" class="del" title="Retirer" aria-label="Retirer">✕</button></div>';
+}
+function renderEditors() {
+  document.getElementById("people").innerHTML = DATA.people.map(p => itemRow(p, "person")).join("");
+  document.getElementById("labels").innerHTML = DATA.labels.map(l => itemRow(l, "label")).join("");
+}
+function renderTools() {
+  let h = '<button type="button" class="tool select" data-t="select" aria-pressed="' + (tool === "select") + '">⬚ Sélection</button><span class="grp">Personnes</span>';
+  if (!tool) tool = "select";
+  h += DATA.people.map(p => '<button type="button" class="tool" data-t="' + p.id + '" aria-pressed="' + (tool === p.id) + '"><i style="background:' + p.color + '"></i>' + esc(nameOf(p)) + '</button>').join("");
+  if (DATA.labels.length) h += '<span class="grp">Libellés</span>' + DATA.labels.map(l => '<button type="button" class="tool" data-t="' + l.id + '" aria-pressed="' + (tool === l.id) + '"><i class="sq" style="background:' + l.color + '"></i>' + esc(l.name || "Libellé") + '</button>').join("");
+  h += '<span class="grp">Actions</span>';
+  [["pause", "P · Pause"], ["nolabel", "Retirer le libellé"], ["closed", "Fermer / rouvrir"], ["erase", "Effacer"]].forEach(([k, t]) => h += '<button type="button" class="tool" data-t="' + k + '" aria-pressed="' + (tool === k) + '">' + t + '</button>');
+  document.getElementById("tools").innerHTML = h;
+  document.getElementById("copyFrom").innerHTML = WEEKS.filter(w => w !== week).map(w => '<option value="' + w + '">' + w + '</option>').join("");
+}
+function renderQuickSel() {
+  document.getElementById("qsDay").innerHTML = DAYS.map((d, i) => '<option value="' + i + '">' + d + '</option>').join("");
+  const opts = sel => TIMES.map((t, i) => '<option value="' + i + '"' + (i === sel ? " selected" : "") + '>' + t + '</option>').join("");
+  document.getElementById("qsFrom").innerHTML = opts(TIMES.indexOf("09h00"));
+  document.getElementById("qsTo").innerHTML = opts(TIMES.indexOf("13h00"));
+  document.getElementById("qsCols").innerHTML = Array.from({ length: NCOL }, (_, j) => '<label><input type="checkbox" value="' + j + '"' + (j === 0 ? " checked" : "") + '> H' + (j + 1) + '</label>').join("");
+}
+function updateSelCount() {
+  document.getElementById("selCount").textContent = selection.size ? selection.size + " case" + (selection.size > 1 ? "s" : "") + " sélectionnée" + (selection.size > 1 ? "s" : "") + " (" + hm(selection.size) + ")" : "";
+}
+function drawCell(td) {
+  const k = td.dataset.k, c = DATA.weeks[week][k], d = Number(k.split("-")[0]);
+  const closed = (c && c.x) || DATA.closedDays[week][d];
+  const p = c && c.p ? person(c.p) : null, l = c && c.l ? lab(c.l) : null;
+  const base = l ? l.color : p ? p.color : "";
+  td.className = "c" + (Number(k.split("-")[1]) === NCOL - 1 ? " dayend" : "") + (closed ? " closed" : "") + (closed && !base ? " blank" : "") + (l && p ? " lab" : "") + (selection.has(k) ? " sel" : "");
+  td.style.backgroundColor = base; td.style.color = base ? textOn(base) : "";
+  if (l && p) td.style.setProperty("--pc", p.color); else td.style.removeProperty("--pc");
+  td.textContent = c && c.P ? "P" : "";
+  td.title = [p ? nameOf(p) : "", l ? l.name : "", c && c.P ? "Pause" : "", closed ? "Fermé" : ""].filter(Boolean).join(" · ");
+}
+function renderGrid() {
+  const W = DATA.weeks[week], CD = DATA.closedDays[week];
+  let h = '<table class="' + (editing ? "editing" : "") + '"><thead><tr class="days"><th class="time" rowspan="2">Heure</th>';
+  DAYS.forEach((d, i) => {
+    const on = !!CD[i];
+    const ctl = editing ? '<button type="button" class="daybtn' + (on ? " on" : "") + '" data-day="' + i + '">' + (on ? "Rouvrir" : "Fermer le jour") + '</button>' : (on ? '<span class="daytag">Fermé</span>' : "");
+    h += '<th colspan="' + NCOL + '" class="dayend' + (on ? " isclosed" : "") + '"><span class="dayname">' + d + ctl + '</span></th>';
+  });
+  h += '</tr><tr class="slots">';
+  DAYS.forEach(() => { for (let j = 0; j < NCOL; j++) h += '<th class="' + (j === NCOL - 1 ? "dayend" : "") + '">H' + (j + 1) + '</th>'; });
+  h += '</tr></thead><tbody>';
+  for (let i = 0; i < NSLOT; i++) {
+    const cls = [TIMES[i].endsWith("h00") ? "hour" : "", TIMES[i] === "12h45" ? "lunch" : ""].join(" ").trim();
+    h += '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td class="time">' + TIMES[i] + '</td>';
+    for (let d = 0; d < DAYS.length; d++) for (let j = 0; j < NCOL; j++) h += '<td class="c" data-k="' + d + "-" + j + "-" + i + '"></td>';
+    h += '</tr>';
+  }
+  h += '</tbody></table>';
+  if (!Object.keys(W).length) h += '<div class="empty-week">La semaine ' + week + ' est vide. Cliquez sur « Modifier » pour la remplir, ou copiez une autre semaine.</div>';
+  const sc = document.getElementById("scroller"); sc.innerHTML = h;
+  sc.querySelectorAll("td.c").forEach(drawCell);
+}
+function renderAll() { renderTabs(); renderLegend(); if (editing) { renderEditors(); renderTools(); updateSelCount(); } renderGrid(); }
+
+// Applique un outil à une case
+function apply(k, t, ctx) {
+  const W = DATA.weeks[week], c = W[k];
+  if (t === "erase") { delete W[k]; return; }
+  if (t === "closed") {
+    if (ctx.closeMode === undefined) ctx.closeMode = !(c && c.x);
+    if (ctx.closeMode) W[k] = Object.assign(c || {}, { x: 1 }); else if (c) { delete c.x; if (!Object.keys(c).length) delete W[k]; }
+    return;
+  }
+  if (t === "pause") {
+    if (!c || !c.p) return;
+    if (ctx.pauseMode === undefined) ctx.pauseMode = !c.P;
+    if (ctx.pauseMode) c.P = 1; else delete c.P;
+    return;
+  }
+  if (t === "nolabel") { if (c) { delete c.l; if (!Object.keys(c).length) delete W[k]; } return; }
+  if (t.startsWith("l")) { W[k] = Object.assign(c || {}, { l: t }); return; }
+  // personne : garde fermeture et libellé, garde la pause seulement si c'est la même personne
+  const keep = c ? { x: c.x, l: c.l, P: c.p === t ? c.P : undefined } : {};
+  const n = { p: t }; for (const [a, b] of Object.entries(keep)) if (b) n[a] = b;
+  W[k] = n;
+}
+
+// Clic / glisser sur la grille
+let painting = false, ctx = {};
+const scroller = document.getElementById("scroller");
+function touch(td) {
+  if (!td || !td.dataset || !td.dataset.k) return;
+  const k = td.dataset.k;
+  if (tool === "select") {
+    if (ctx.selMode === undefined) ctx.selMode = !selection.has(k);
+    if (ctx.selMode) selection.add(k); else selection.delete(k);
+    updateSelCount();
+  } else apply(k, tool, ctx);
+  drawCell(td);
+}
+scroller.addEventListener("pointerdown", e => {
+  const db = e.target.closest(".daybtn");
+  if (db) { const d = Number(db.dataset.day), CD = DATA.closedDays[week]; if (CD[d]) delete CD[d]; else CD[d] = 1; persist(); renderGrid(); toast(CD[d] ? DAYS[d] + " fermé (heures conservées)" : DAYS[d] + " rouvert"); return; }
+  if (!editing) return; const td = e.target.closest("td.c"); if (!td) return;
+  e.preventDefault(); painting = true; ctx = {}; touch(td);
+});
+scroller.addEventListener("pointermove", e => {
+  if (!painting) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY); touch(el && el.closest ? el.closest("td.c") : null);
+});
+window.addEventListener("pointerup", () => { if (painting) { painting = false; if (tool !== "select") { persist(); renderLegend(); } } });
+
+// Outils : avec une sélection en attente, cliquer un outil l'applique à toute la sélection
+document.getElementById("tools").addEventListener("click", e => {
+  const b = e.target.closest(".tool"); if (!b) return;
+  const t = b.dataset.t;
+  if (t !== "select" && selection.size) {
+    const c2 = {}; for (const k of selection) apply(k, t, c2);
+    const n = selection.size; selection.clear(); persist(); renderLegend(); renderGrid(); updateSelCount();
+    toast(n + " case" + (n > 1 ? "s" : "") + " modifiée" + (n > 1 ? "s" : ""));
+    tool = "select"; renderTools(); return;
+  }
+  tool = t; document.querySelectorAll(".tool").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+});
+document.getElementById("qsGo").addEventListener("click", () => {
+  const d = Number(document.getElementById("qsDay").value), a = Number(document.getElementById("qsFrom").value), z = Number(document.getElementById("qsTo").value);
+  const cols = [...document.querySelectorAll("#qsCols input:checked")].map(x => Number(x.value));
+  if (z <= a) { toast("L'heure de fin doit être après l'heure de début"); return; }
+  if (!cols.length) { toast("Cochez au moins une colonne H"); return; }
+  for (const j of cols) for (let i = a; i < Math.min(z, NSLOT); i++) selection.add(d + "-" + j + "-" + i);
+  tool = "select"; renderTools(); renderGrid(); updateSelCount();
+  toast("Sélection prête : choisissez une personne, un libellé ou une action");
+});
+document.getElementById("selClear").addEventListener("click", () => { selection.clear(); renderGrid(); updateSelCount(); });
+
+// Personnes et libellés
+function editorEvents(el, listName) {
+  el.addEventListener("input", e => {
+    const box = e.target.closest(".person"); if (!box) return;
+    const o = DATA[listName].find(x => x.id === box.dataset.id);
+    if (e.target.type === "color") o.color = e.target.value; else o.name = e.target.value;
+    persist(); renderLegend(); renderGrid();
+  });
+  el.addEventListener("change", () => renderTools());
+  el.addEventListener("click", e => {
+    const del = e.target.closest(".del"); if (!del) return;
+    const id = del.closest(".person").dataset.id;
+    if (!del.dataset.armed) { del.dataset.armed = "1"; del.textContent = "Retirer ?"; del.style.fontSize = "12px"; return; }
+    DATA[listName] = DATA[listName].filter(x => x.id !== id);
+    const field = listName === "people" ? "p" : "l";
+    for (const W of Object.values(DATA.weeks)) for (const k of Object.keys(W)) if (W[k][field] === id) { delete W[k][field]; if (!Object.keys(W[k]).length) delete W[k]; }
+    if (tool === id) tool = null; persist(); renderAll(); toast("Retiré");
+  });
+}
+editorEvents(document.getElementById("people"), "people");
+editorEvents(document.getElementById("labels"), "labels");
+const FREE = ["#ff7f50", "#4f8fe0", "#e0475b", "#8bd450", "#f5d547", "#b07cd8", "#40c4aa", "#ff9fd1", "#795548", "#26a69a"];
+const freeColor = () => { const used = DATA.people.concat(DATA.labels).map(p => p.color); return FREE.find(c => !used.includes(c)) || "#888888"; };
+document.getElementById("addPerson").addEventListener("click", () => {
+  const id = "p" + Date.now().toString(36); DATA.people.push({ id, name: "", color: freeColor() }); tool = id; persist(); renderAll();
+  const inp = document.querySelector('#people .person[data-id="' + id + '"] input[type=text]'); if (inp) inp.focus();
+});
+document.getElementById("addLabel").addEventListener("click", () => {
+  const id = "l" + Date.now().toString(36); DATA.labels.push({ id, name: "", color: freeColor() }); persist(); renderAll();
+  const inp = document.querySelector('#labels .person[data-id="' + id + '"] input[type=text]'); if (inp) inp.focus();
+});
+
+// Semaines
+function setAnchor() {
+  const v = document.getElementById("anchorDate").value; if (!v) return;
+  DATA.anchor = { date: v, letter: document.getElementById("anchorLetter").value };
+  persist(); week = letterOf(ref); renderAll(); toast("Rotation mise à jour : aujourd'hui = semaine " + letterOf(new Date()));
+}
+if (document.getElementById("anchorDate")) {
+  document.getElementById("anchorDate").addEventListener("change", setAnchor);
+  document.getElementById("anchorLetter").addEventListener("change", setAnchor);
+}
+document.getElementById("tabs").addEventListener("click", e => { const b = e.target.closest(".tab"); if (!b) return; week = b.dataset.w; selection.clear(); renderAll(); });
+function goto(d) { ref = d; week = letterOf(d); selection.clear(); renderAll(); }
+document.getElementById("prevW").addEventListener("click", () => { const d = new Date(ref); d.setDate(d.getDate() - 7); goto(d); });
+document.getElementById("nextW").addEventListener("click", () => { const d = new Date(ref); d.setDate(d.getDate() + 7); goto(d); });
+document.getElementById("todayBtn").addEventListener("click", () => goto(new Date()));
+function armed(b, label, normal, fn) {
+  if (!b.dataset.armed) { b.dataset.armed = "1"; b.textContent = label; return; }
+  delete b.dataset.armed; b.textContent = normal; fn();
+}
+document.getElementById("copyBtn").addEventListener("click", e => {
+  const from = document.getElementById("copyFrom").value;
+  armed(e.currentTarget, "Remplacer la semaine " + week + " ?", "Copier", () => {
+    DATA.weeks[week] = clone(DATA.weeks[from]); DATA.closedDays[week] = clone(DATA.closedDays[from]);
+    persist(); renderAll(); toast("Semaine " + from + " copiée dans " + week);
+  });
+});
+document.getElementById("clearBtn").addEventListener("click", e => armed(e.currentTarget, "Confirmer : vider " + week + " ?", "Vider cette semaine", () => {
+  DATA.weeks[week] = {}; DATA.closedDays[week] = {}; persist(); renderAll(); toast("Semaine " + week + " vidée");
+}));
+
+// Mode modification, sauvegarde, impression
+document.getElementById("editBtn").addEventListener("click", e => {
+  editing = !editing; const b = e.currentTarget;
+  b.setAttribute("aria-pressed", String(editing)); b.textContent = editing ? "Terminer" : "Modifier";
+  document.getElementById("editpanel").hidden = !editing; selection.clear(); renderAll();
+});
+document.getElementById("resetBtn").addEventListener("click", e => armed(e.currentTarget, "Confirmer : tout annuler ?", "Revenir à l'original", () => {
+  DATA = normalize(clone(ORIGINAL)); tool = null; selection.clear(); persist(); renderAll(); toast("Planning d'origine restauré");
+}));
+document.getElementById("saveFile").addEventListener("click", () => {
+  const out = SRC.replace(/\/\*DATA\*\/[\s\S]*?\/\*FIN\*\//, "/*DATA*/" + JSON.stringify(DATA) + "/*FIN*/");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([out], { type: "text/html" })); a.download = "Planning.html";
+  document.body.append(a); a.click(); a.remove(); toast("Fichier enregistré dans Téléchargements");
+});
+document.getElementById("exportRO").addEventListener("click", () => {
+  const stamp = new Date().toLocaleDateString("fr-BE") + " à " + new Date().toLocaleTimeString("fr-BE", { hour: "2-digit", minute: "2-digit" });
+  const out = SRC.replace(/\/\*DATA\*\/[\s\S]*?\/\*FIN\*\//, "/*DATA*/" + JSON.stringify(DATA) + "/*FIN*/")
+                 .replace("/*RO*/false/*RO*/", "/*RO*/true/*RO*/")
+                 .replace(/\/\*ONLINE\*\/[\s\S]*?\/\*FINONLINE\*\//, "/*ONLINE*/" + JSON.stringify(ONLINE) + "/*FINONLINE*/")
+                 .replace("<title>Planning semaines A B C D</title>", "<meta name=\"robots\" content=\"noindex, nofollow\">\n<title>Planning (consultation)</title>")
+                 .replace('Semaines A, B, C et D · une couleur par personne', 'Version consultation · mise à jour le ' + stamp);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([out], { type: "text/html" })); a.download = "index.html";
+  document.body.append(a); a.click(); a.remove(); toast("Version employés enregistrée dans Téléchargements (index.html)");
+});
+document.getElementById("printBtn").addEventListener("click", () => window.print());
+
+if (READONLY) {
+  document.getElementById("editBtn").remove();
+  document.getElementById("editpanel").remove();
+  document.querySelector(".head-actions").insertAdjacentHTML("afterbegin", '<span class="ro-badge">Lecture seule</span>');
+  document.querySelector("footer").textContent = "Version consultation : pour toute modification, adressez-vous au responsable du planning.";
+} else renderQuickSel();
+week = letterOf(new Date());
+renderAll();
+if (READONLY) initReaderOnline(); else initOwnerOnline();
+</script></body></html>
